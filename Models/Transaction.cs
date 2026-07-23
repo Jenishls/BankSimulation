@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using BankingConsole.Common;
 using BankingConsole.Models.Enums;
+using ValidationException = BankingConsole.Common.ValidationException;
 
 namespace BankingConsole.Models;
 
@@ -45,5 +47,53 @@ public class Transaction
             Entries = Entries.ToList(),
             IdempotencyKey = idempotencyKey
         };
+    }
+
+    public void ValidatePosting()
+    {
+        if (State != TransactionState.PENDING)
+            throw new ValidationException($"Only pending transactions can be posted. Current state: {State}");
+
+        var failures = new List<string>();
+
+        foreach (var group in Entries.GroupBy(e => e.Account))
+        {
+            var account = group.Key;
+            var totalDebit = group.Where(e => e.Flow == Flow.DEBIT).Sum(e => e.Amount);
+            var totalCredit = group.Where(e => e.Flow == Flow.CREDIT).Sum(e => e.Amount);
+            var net = totalCredit - totalDebit;
+
+            var canApply = net switch
+            {
+                < 0 => account.CanWithdraw(-net),
+                > 0 => account.CanDeposit(net),
+                _ => true
+            };
+
+            if (!canApply)
+                failures.Add($"Account {account.AccountNumber}: insufficient balance or limit exceeded");
+        }
+
+        if (failures.Count > 0)
+            throw new ValidationException("Transaction failed account validation.",failures);
+    }
+
+    public void Post(string description)
+    {
+        ValidatePosting();
+
+        foreach (var entry in Entries.Where(e => e.Flow == Flow.DEBIT)
+            .Concat(Entries.Where(e => e.Flow == Flow.CREDIT)))
+        {
+            var succeeded = entry.Flow == Flow.DEBIT
+                ? entry.Account.Withdraw(entry.Amount)
+                : entry.Account.Deposit(entry.Amount);
+
+            if (!succeeded)
+                throw new ConflictException($"Account operation failed unexpectedly for {entry.Account.AccountNumber}");
+        }
+
+        State = TransactionState.POSTED;
+        Description = description;
     }
 }

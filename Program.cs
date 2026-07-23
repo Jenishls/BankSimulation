@@ -1,9 +1,20 @@
-﻿using BankingConsole.DB;
+using BankingConsole.DB;
+using BankingConsole.Middleware;
 using BankingConsole.Repository;
 using BankingConsole.Services;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+);
+
+builder.Services.AddExceptionHandler<AppExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection")
@@ -23,14 +34,16 @@ builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<CustomerService>();
 
-builder.Services.AddProblemDetails();
-
 var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
 app.MapGet("/health", () =>
-    Results.Ok(new { Status = "Healthy" }));
+{
+    app.Logger.LogInformation("Health endpoint called");
+    return Results.Ok(new { Status = "Healthy" });
+});
+
 
 app.Run();

@@ -8,6 +8,6 @@ public class LedgerEntry
     public required Account Account { get; set; }
     public decimal Amount { get; set; }
     public Currency Currency { get; set; }
-    public Flow Flow { get; set; }
+    public required Flow Flow { get; set; }
     public LedgerEntry() {}
 }
