@@ -28,7 +28,7 @@ public class TransactionService
         _logger = logger;
     }
 
-    public async Task<OperationResult> CreateTransactionAsync(List<LedgerEntry> entries, EntryType entryType, string description, Guid idempotencyKey)
+    public async Task<Transaction> CreateTransactionAsync(List<LedgerEntry> entries, EntryType entryType, string description, Guid idempotencyKey)
     {
         _logger.LogInformation(
             "Transaction initiated. IdempotencyKey: {IdempotencyKey}, EntryCount: {EntryCount}, EntryType : {EntryType}, Description : {Description} ",
@@ -47,13 +47,7 @@ public class TransactionService
                 idempotencyKey,
                 existingTransaction.TransactionId);
 
-            return new OperationResult
-            (
-              200,
-              true,
-              $"Transaction {existingTransaction.TransactionId} already exisits.",
-              []  
-            );
+            return existingTransaction;
         }
 
         var transaction = Transaction.Create(
@@ -83,10 +77,10 @@ public class TransactionService
             idempotencyKey,
             transaction.TransactionId
             );
-        return new OperationResult(201, true, "Transaction created successfully.",  []);
+        return transaction;
     }
 
-    public async Task<OperationResult> UpdateTransactionAsync(Guid transactionId, string description, Guid idempotencyKey)
+    public async Task<Transaction> UpdateTransactionAsync(Guid transactionId, string description, Guid idempotencyKey)
     {
         _logger.LogInformation(
             "Transaction Update Initiated. IdempotencyKey : {IdempotencyKey}, TransactionId: {TransactionId}",
@@ -127,6 +121,6 @@ public class TransactionService
             transaction.TransactionId
             );
 
-        return new OperationResult(200,true, "Transaction updated successfully.", []);
+        return transaction;
     } 
 }

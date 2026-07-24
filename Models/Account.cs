@@ -11,6 +11,9 @@ public class Account
     public decimal Balance { get; private set; }
     public AccountType Type { get; set; }
     public AccountState State { get; set; }
+    public decimal MinimumBalance { get; set; }
+    public decimal DailyWithdrawalLimit { get; set; }
+    public decimal InterestRate { get; set; }
     [Timestamp]
     public byte[] RowVersion { get; private set; } = [];
     public Account(){}
@@ -26,8 +29,6 @@ public class Account
     {
         if (!CanWithdraw(amount)) return false;
 
-        if (amount > Balance) return false;
-
         Balance -= amount;
         return true;
     }
@@ -39,7 +40,8 @@ public class Account
     public bool CanWithdraw(decimal amount)
     {
         var stateAllowedForWithdraw = State == AccountState.ACTIVE || State == AccountState.CREDITFREEZE;
-        return stateAllowedForWithdraw && amount > 0 && amount <= Balance;
+        var withinDailyLimit = DailyWithdrawalLimit <= 0 || amount <= DailyWithdrawalLimit;
+        return stateAllowedForWithdraw && amount > 0 && withinDailyLimit && Balance - amount >= MinimumBalance;
     }
     public decimal GetBalance()
     {

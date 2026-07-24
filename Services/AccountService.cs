@@ -1,6 +1,8 @@
 using BankingConsole.Models;
+using BankingConsole.Models.Customer;
 using BankingConsole.Common;
 using BankingConsole.Models.Enums;
+using BankingConsole.Models.Factories;
 using BankingConsole.Repository;
 using BankingConsole.DB;
 
@@ -10,27 +12,21 @@ public class AccountService
 {
     private readonly IAccountRepository _accountRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly AccountFactory _accountFactory;
 
-    public AccountService(AccountRepository accountRepository, UnitOfWork unitOfWork)
+    public AccountService(IAccountRepository accountRepository, IUnitOfWork unitOfWork, AccountFactory accountFactory)
     {
         _accountRepository = accountRepository;
         _unitOfWork = unitOfWork;
+        _accountFactory = accountFactory;
     }
 
     public async Task<OperationResult> CreateAccount(Customer customer)
+        => await CreateAccount(customer, AccountType.SAVINGS);
+
+    public async Task<OperationResult> CreateAccount(Customer customer, AccountType accountType)
     {
-        var accountId = Guid.NewGuid();
-        var account = new Account
-        {
-            AccountId = accountId,
-            AccountNumber = AccountNumberGeneratorService.GenerateAccountNumber(
-                accountId,
-                AccountType.SAVINGS
-                ),
-            CustomerId = customer.CustomerId,
-            Type = AccountType.SAVINGS,
-            State = AccountState.ACTIVE
-        };
+        var account = _accountFactory.Create(accountType, customer);
 
         _accountRepository.AddAccount(account);
         await _unitOfWork.SaveChangesAsync();

@@ -1,4 +1,6 @@
 using BankingConsole.Models;
+using BankingConsole.Models.Customer;
+using BankingConsole.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 public class AppDbContext : DbContext
@@ -10,6 +12,10 @@ public class AppDbContext : DbContext
 
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<IndividualCustomer> IndividualCustomers => Set<IndividualCustomer>();
+    public DbSet<InstitutionalCustomer> InstitutionalCustomers => Set<InstitutionalCustomer>();
+    public DbSet<CustomerRole> CustomerRoles => Set<CustomerRole>();
+    public DbSet<CustomerAction> CustomerActions => Set<CustomerAction>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
     public DbSet<TransactionAction> TransactionActions => Set<TransactionAction>();
@@ -19,6 +25,8 @@ public class AppDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         ConfigureCustomer(modelBuilder);
+        ConfigureCustomerRole(modelBuilder);
+        ConfigureCustomerAction(modelBuilder);
         ConfigureAccount(modelBuilder);
         ConfigureTransaction(modelBuilder);
         ConfigureLedgerEntry(modelBuilder);
@@ -35,15 +43,121 @@ public class AppDbContext : DbContext
             .HasMaxLength(200)
             .IsRequired();
 
-        customer.Property(c => c.Email)
-            .HasMaxLength(320)
+        customer.Property(c => c.TaxId)
+            .HasMaxLength(50);
+
+        customer.HasDiscriminator(c => c.CustomerType)
+            .HasValue<IndividualCustomer>(CustomerType.INDIVIDUAL)
+            .HasValue<InstitutionalCustomer>(CustomerType.INSTITUTIONAL);
+
+        customer.OwnsMany(c => c.Address, address =>
+        {
+            address.ToTable("CustomerAddresses");
+            address.WithOwner().HasForeignKey("CustomerId");
+            address.Property<Guid>("AddressId");
+            address.HasKey("CustomerId", "AddressId");
+
+            address.Property(a => a.Street).HasMaxLength(200).IsRequired();
+            address.Property(a => a.ZipCode).HasMaxLength(20).IsRequired();
+            address.Property(a => a.City).HasMaxLength(100).IsRequired();
+            address.Property(a => a.Municipality).HasMaxLength(100).IsRequired();
+            address.Property(a => a.State).HasMaxLength(100).IsRequired();
+            address.Property(a => a.Country).HasMaxLength(100).IsRequired();
+        });
+
+        customer.OwnsMany(c => c.Contact, contact =>
+        {
+            contact.ToTable("CustomerContacts");
+            contact.WithOwner().HasForeignKey("CustomerId");
+            contact.Property<Guid>("ContactId");
+            contact.HasKey("CustomerId", "ContactId");
+
+            contact.Property(c => c.CountryCode).HasMaxLength(8).IsRequired();
+            contact.Property(c => c.Phone).HasMaxLength(32);
+            contact.Property(c => c.Mobile).HasMaxLength(32).IsRequired();
+            contact.Property(c => c.Email).HasMaxLength(320).IsRequired();
+            contact.HasIndex(c => c.Email);
+        });
+
+        customer.OwnsMany(c => c.Identity, identity =>
+        {
+            identity.ToTable("CustomerIdentities");
+            identity.WithOwner().HasForeignKey("CustomerId");
+            identity.Property<Guid>("IdentityId");
+            identity.HasKey("CustomerId", "IdentityId");
+
+            identity.Property(i => i.DocumentNumber).HasMaxLength(100).IsRequired();
+            identity.Property(i => i.IssuingAuthority).HasMaxLength(200).IsRequired();
+            identity.Property(i => i.IssuingCountry).HasMaxLength(100).IsRequired();
+            identity.HasIndex(i => new { i.DocumentNumber, i.IssuingCountry })
+                .IsUnique();
+        });
+
+        var individual = modelBuilder.Entity<IndividualCustomer>();
+        individual.HasOne(i => i.Nominee)
+            .WithOne()
+            .HasForeignKey<CustomerRole>("NomineeForCustomerId")
+            .OnDelete(DeleteBehavior.SetNull);
+
+        var institution = modelBuilder.Entity<InstitutionalCustomer>();
+        institution.Property(i => i.RegistrationNumber)
+            .HasMaxLength(100)
+            .IsRequired();
+        institution.HasIndex(i => i.RegistrationNumber)
+            .IsUnique();
+        institution.HasMany(i => i.Roles)
+            .WithOne()
+            .HasForeignKey("InstitutionalCustomerId")
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureCustomerRole(ModelBuilder modelBuilder)
+    {
+        var role = modelBuilder.Entity<CustomerRole>();
+
+        role.Property<Guid>("CustomerRoleId");
+        role.HasKey("CustomerRoleId");
+
+        role.Property(r => r.RoleType)
+            .HasMaxLength(100)
             .IsRequired();
 
-        customer.Property(c => c.PhoneNumber)
-            .HasMaxLength(32);
+        role.HasOne(r => r.IndividualCustomer)
+            .WithMany()
+            .HasForeignKey("IndividualCustomerId")
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Restrict);
+    }
 
-        customer.HasIndex(c => c.Email)
+    private static void ConfigureCustomerAction(ModelBuilder modelBuilder)
+    {
+        var action = modelBuilder.Entity<CustomerAction>();
+
+        action.HasKey(a => a.CustomerActionId);
+
+        action.Property(a => a.OldStateJson)
+            .HasColumnType("nvarchar(max)");
+
+        action.Property(a => a.NewStateJson)
+            .HasColumnType("nvarchar(max)")
+            .IsRequired();
+
+        action.Property(a => a.PerformedBy)
+            .HasMaxLength(200)
+            .IsRequired();
+
+        action.Property(a => a.Timestamp)
+            .IsRequired();
+
+        action.HasIndex(a => a.IdempotencyKey)
             .IsUnique();
+
+        action.HasIndex(a => new { a.CustomerId, a.Timestamp });
+
+        action.HasOne<Customer>()
+            .WithMany()
+            .HasForeignKey(a => a.CustomerId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureAccount(ModelBuilder modelBuilder)

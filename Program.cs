@@ -1,5 +1,7 @@
 using BankingConsole.DB;
+using BankingConsole.Factories;
 using BankingConsole.Middleware;
+using BankingConsole.Models.Factories;
 using BankingConsole.Repository;
 using BankingConsole.Services;
 using Microsoft.EntityFrameworkCore;
@@ -28,8 +30,12 @@ builder.Services.AddDbContext<AppDbContext>(
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<ITransactionActionRepository, TransactionActionRepository>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+builder.Services.AddScoped<ICustomerActionRepository, CustomerActionRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+builder.Services.AddScoped<AccountFactory>();
+builder.Services.AddScoped<ICustomerFactory, CustomerFactory>();
 builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<CustomerService>();

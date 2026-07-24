@@ -1,34 +1,191 @@
-using BankingConsole.Models;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using BankingConsole.Common;
+using BankingConsole.DB;
+using BankingConsole.Factories;
+using BankingConsole.Models.Customer;
+using BankingConsole.Models.CustomerCreation;
+using BankingConsole.Models.CustomerUpdate;
+using BankingConsole.Repository;
 
-namespace BankingConsole.Services
+namespace BankingConsole.Services;
+
+public sealed class CustomerService
 {
-    public class CustomerService
+    private readonly ICustomerRepository _customerRepository;
+    private readonly ICustomerActionRepository _customerActionRepository;
+    private readonly ICustomerFactory _customerFactory;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<CustomerService> _logger;
+
+    public CustomerService(
+        ICustomerRepository customerRepository,
+        ICustomerActionRepository customerActionRepository,
+        ICustomerFactory customerFactory,
+        IUnitOfWork unitOfWork,
+        ILogger<CustomerService> logger)
     {
-        private readonly AppDbContext _context;
+        _customerRepository = customerRepository;
+        _customerActionRepository = customerActionRepository;
+        _customerFactory = customerFactory;
+        _unitOfWork = unitOfWork;
+        _logger = logger;
+    }
 
-        public CustomerService(AppDbContext context)
+    public async Task<Customer> CreateCustomerAsync(
+        Guid idempotencyKey,
+        CustomerCreationData creationData,
+        CancellationToken cancellationToken = default)
+    {
+        var existingAction = await _customerActionRepository.GetByIdempotencyKeyAsync(idempotencyKey);
+        if(existingAction is not null)
         {
-            _context = context;
+            var existingCustomer = await _customerRepository.GetByIdAsync(existingAction.CustomerId);
+            return existingCustomer!;
         }
 
-        public async Task<Customer> CreateCustomer()
+        var customer = _customerFactory.Create(creationData);
+        var newState = JsonSerializer.Serialize(customer);
+        var customerAction = CustomerAction.Create(
+            customer.CustomerId,
+            idempotencyKey,
+            null,
+            newState,
+            "User"
+            );
+
+        _customerRepository.AddCustomer(customer);
+        _customerActionRepository.Add(customerAction);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Created {CustomerType} customer {CustomerId}",
+            customer.CustomerType,
+            customer.CustomerId);
+
+        return customer;
+    }
+
+    public async Task<Customer> UpdateCustomerAsync(
+        Guid idempotencyKey,
+        CustomerUpdateData customerUpdateData,
+        string performedBy,
+        CancellationToken cancellationToken = default)
+    {
+        var existingAction =
+            await _customerActionRepository
+                .GetByIdempotencyKeyAsync(idempotencyKey);
+
+        if (existingAction is not null)
         {
-            var customer = new Customer
+            return await _customerRepository.GetByIdAsync(
+                existingAction.CustomerId)
+                ?? throw new InvalidOperationException(
+                    $"CustomerAction exists for idempotency key " +
+                    $"{idempotencyKey}, but customer " +
+                    $"{existingAction.CustomerId} was not found.");
+        }
+
+        var customer =
+            await _customerRepository.GetByIdAsync(
+                customerUpdateData.CustomerId)
+            ?? throw new NotFoundException(
+                $"Customer {customerUpdateData.CustomerId} was not found.");
+
+        if (customer.CustomerType != customerUpdateData.CustomerType)
+        {
+            throw new ConflictException(
+                "A customer's type cannot be changed.");
+        }
+
+        var oldStateJson = JsonSerializer.Serialize(customer);
+
+        ApplyUpdates(customer, customerUpdateData);
+
+        var newStateJson = JsonSerializer.Serialize(customer);
+
+        var customerAction = CustomerAction.Create(
+            customer.CustomerId,
+            idempotencyKey,
+            oldStateJson,
+            newStateJson,
+            performedBy);
+
+        _customerActionRepository.Add(customerAction);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Updated {CustomerType} customer {CustomerId}",
+            customer.CustomerType,
+            customer.CustomerId);
+
+        return customer;
+    }
+
+    private static void ApplyUpdates(
+        Customer customer,
+        CustomerUpdateData data)
+    {
+        if (string.IsNullOrWhiteSpace(data.Name))
+            throw new ArgumentException("Customer name is required.", nameof(data));
+
+        customer.Name = data.Name.Trim();
+        customer.KycStatus = data.KycStatus;
+        customer.Address = data.Addresses.ToList();
+        customer.Contact = data.Contacts.ToList();
+        customer.Identity = data.Identities.ToList();
+
+        switch (customer)
+        {
+            case IndividualCustomer individual:
             {
-                Name = "John Doe",
-                Email = "john@gmail.com",
-                PhoneNumber = ""
-            };
+                var details = data.Individual
+                    ?? throw new ArgumentException(
+                        "Individual update details are required.",
+                        nameof(data));
 
-            return customer;
+                if (data.Institutional is not null)
+                    throw new ArgumentException(
+                        "Institutional details cannot be used for an individual customer.",
+                        nameof(data));
+
+                individual.DateOfBirth = details.DateOfBirth;
+                individual.Gender = details.Gender;
+                individual.Nationality = details.Nationality;
+                individual.Occupation = details.Occupation;
+                individual.EmploymentStatus = details.EmploymentStatus;
+                individual.Nominee = details.Nominee;
+                break;
+            }
+
+            case InstitutionalCustomer institutional:
+            {
+                var details = data.Institutional
+                    ?? throw new ArgumentException(
+                        "Institutional update details are required.",
+                        nameof(data));
+
+                if (data.Individual is not null)
+                    throw new ArgumentException(
+                        "Individual details cannot be used for an institutional customer.",
+                        nameof(data));
+
+                if (string.IsNullOrWhiteSpace(details.RegistrationNumber))
+                    throw new ArgumentException(
+                        "Registration number is required.",
+                        nameof(data));
+
+                institutional.RegistrationNumber =
+                    details.RegistrationNumber.Trim();
+                institutional.RegisteredDate = details.RegisteredDate;
+                institutional.StartDate = details.StartDate;
+                institutional.Roles = details.Roles;
+                break;
+            }
+
+            default:
+                throw new NotSupportedException(
+                    $"Customer type {customer.GetType().Name} is unsupported.");
         }
-
-        public async Task<Customer> UpdateCustomer(Customer customer)
-        {
-            customer.Email = "john.doe@gmail.com";
-            return customer;
-        }
-
-        
     }
 }
