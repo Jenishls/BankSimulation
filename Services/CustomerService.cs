@@ -126,66 +126,6 @@ public sealed class CustomerService
         Customer customer,
         CustomerUpdateData data)
     {
-        if (string.IsNullOrWhiteSpace(data.Name))
-            throw new ArgumentException("Customer name is required.", nameof(data));
-
-        customer.Name = data.Name.Trim();
-        customer.KycStatus = data.KycStatus;
-        customer.Address = data.Addresses.ToList();
-        customer.Contact = data.Contacts.ToList();
-        customer.Identity = data.Identities.ToList();
-
-        switch (customer)
-        {
-            case IndividualCustomer individual:
-            {
-                var details = data.Individual
-                    ?? throw new ArgumentException(
-                        "Individual update details are required.",
-                        nameof(data));
-
-                if (data.Institutional is not null)
-                    throw new ArgumentException(
-                        "Institutional details cannot be used for an individual customer.",
-                        nameof(data));
-
-                individual.DateOfBirth = details.DateOfBirth;
-                individual.Gender = details.Gender;
-                individual.Nationality = details.Nationality;
-                individual.Occupation = details.Occupation;
-                individual.EmploymentStatus = details.EmploymentStatus;
-                individual.Nominee = details.Nominee;
-                break;
-            }
-
-            case InstitutionalCustomer institutional:
-            {
-                var details = data.Institutional
-                    ?? throw new ArgumentException(
-                        "Institutional update details are required.",
-                        nameof(data));
-
-                if (data.Individual is not null)
-                    throw new ArgumentException(
-                        "Individual details cannot be used for an institutional customer.",
-                        nameof(data));
-
-                if (string.IsNullOrWhiteSpace(details.RegistrationNumber))
-                    throw new ArgumentException(
-                        "Registration number is required.",
-                        nameof(data));
-
-                institutional.RegistrationNumber =
-                    details.RegistrationNumber.Trim();
-                institutional.RegisteredDate = details.RegisteredDate;
-                institutional.StartDate = details.StartDate;
-                institutional.Roles = details.Roles;
-                break;
-            }
-
-            default:
-                throw new NotSupportedException(
-                    $"Customer type {customer.GetType().Name} is unsupported.");
-        }
+        customer.ApplyUpdate(data);
     }
 }

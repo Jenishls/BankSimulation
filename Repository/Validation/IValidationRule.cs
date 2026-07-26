@@ -1,3 +1,4 @@
+using BankingConsole.Models.Account;
 using BankingConsole.Models;
 
 namespace BankingConsole.Repository.Validation;

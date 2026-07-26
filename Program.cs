@@ -1,7 +1,6 @@
 using BankingConsole.DB;
 using BankingConsole.Factories;
 using BankingConsole.Middleware;
-using BankingConsole.Models.Factories;
 using BankingConsole.Repository;
 using BankingConsole.Services;
 using Microsoft.EntityFrameworkCore;

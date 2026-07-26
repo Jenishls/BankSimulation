@@ -1,5 +1,4 @@
 using BankingConsole.Models.Customer;
-using BankingConsole.Models.Enum;
 using BankingConsole.Models.Enums;
 
 namespace BankingConsole.Models.CustomerUpdate;

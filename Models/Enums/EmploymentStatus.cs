@@ -1,4 +1,4 @@
-namespace BankingConsole.Models.Enum;
+namespace BankingConsole.Models.Enums;
 
 public enum EmploymentStatus
 {

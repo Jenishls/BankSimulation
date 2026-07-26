@@ -1,4 +1,4 @@
-using BankingConsole.Models;
+using BankingConsole.Models.Account;
 
 namespace BankingConsole.Repository
 {

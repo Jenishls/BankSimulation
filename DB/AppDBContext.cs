@@ -1,4 +1,5 @@
 using BankingConsole.Models;
+using BankingConsole.Models.Account;
 using BankingConsole.Models.Customer;
 using BankingConsole.Models.Enums;
 using Microsoft.EntityFrameworkCore;

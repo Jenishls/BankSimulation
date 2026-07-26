@@ -1,5 +1,5 @@
+using BankingConsole.Models.Account;
 using BankingConsole.Models;
-using BankingConsole.Models.Enums;
 
 namespace BankingConsole.Repository.Validation;
 

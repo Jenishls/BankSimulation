@@ -1,4 +1,3 @@
-using BankingConsole.Factories;
 using BankingConsole.Models.Customer;
 using BankingConsole.Models.CustomerCreation;
 using BankingConsole.Models.Enums;
@@ -35,24 +34,20 @@ public sealed class CustomerFactory : ICustomerFactory
             throw new ArgumentException(
                 "Institutional details cannot be provided for an individual customer.");
         }
-
-         return new IndividualCustomer
-        {
-            CustomerId = Guid.NewGuid(),
-            CustomerType = CustomerType.INDIVIDUAL,
-            Name = data.Name.Trim(),
-            Address = data.Addresses,
-            Contact = data.Contacts,
-            Identity = data.Identities,
-            KycStatus = data.KycStatus, 
-
-            DateOfBirth = details.DateOfBirth,
-            Gender = details.Gender,
-            Nationality = details.Nationality,
-            Occupation = details.Occupation,
-            EmploymentStatus = details.EmploymentStatus,
-            Nominee = details.Nominee
-        };
+        
+         return IndividualCustomer.Create
+        (
+            data.Name.Trim(),
+            data.Addresses,
+            data.Contacts,
+            data.Identities,
+            data.KycStatus, 
+            details.DateOfBirth,
+            details.Gender,
+            details.Nationality,
+            details.Occupation,
+            details.EmploymentStatus
+        );
     }
 
     private static InstitutionalCustomer CreateInstitutional(CustomerCreationData data)
@@ -67,20 +62,19 @@ public sealed class CustomerFactory : ICustomerFactory
                 "Individual details cannot be provided for an institutional customer.");
         }
 
-        return new InstitutionalCustomer
-        {
-            CustomerId = Guid.NewGuid(),
-            CustomerType = CustomerType.INSTITUTIONAL,
-            Name = data.Name.Trim(),
-            Address = data.Addresses,
-            Contact = data.Contacts,
-            Identity = data.Identities,
-            KycStatus = data.KycStatus,
+        return InstitutionalCustomer.Create
+        (
+            
+            data.Name.Trim(),
+            data.Addresses,
+            data.Contacts,
+            data.Identities,
+            data.KycStatus,
 
-            RegistrationNumber = details.RegistrationNumber.Trim(),
-            RegisteredDate = details.RegisteredDate,
-            StartDate = details.StartDate,
-            Roles = details.Roles,
-        }; 
+            details.RegistrationNumber.Trim(),
+            details.RegisteredDate,
+            details.StartDate,
+            details.Roles
+        ); 
     }
 }
