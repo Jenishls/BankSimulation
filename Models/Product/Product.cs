@@ -1,52 +1,97 @@
-using BankingConsole.Models.Account;
 using BankingConsole.Models.Enums;
 
 namespace BankingConsole.Models.Product;
 
-public abstract class Product
+public sealed class Product
 {
     public Guid ProductId { get; private set; }
-    public string ProductCode { get; protected set; } = null!;
-    public string ProductName { get; protected set; } = null!;
-    public Currency Currency { get; protected set; }
-    public CustomerType AllowedCustomerType { get; protected set; }
-    public decimal MinimumAmount { get; protected set; }
+    public string ProductCode { get; private set; } = null!;
+    public string ProductName { get; private set; } = null!;
+    public string BranchCode { get; private set; } = null!;
+    public Currency Currency { get; private set; }
+    public CustomerType AllowedCustomerType { get; private set; }
+    public decimal MinimumAmount { get; private set; }
+    public ProductType ProductType { get; private set; }
 
-    public Flow InterestFlow { get; protected set; }
-    public decimal InterestRate { get; protected set; } = 0m;
-    public List<InterestPostPolicy> InterestPostPolicies { get; protected set; } = [];
-    public Frequency? InterestPostingFrequency { get; protected set; }
-    public OfficeAccount? InterestAccount {get; protected set;}
+    public decimal InterestRate { get; private set; }
+    public Flow InterestFlow { get; private set; }
+    public bool InterestPostToContra { get; private set; }
+    public List<InterestPostPolicy> InterestPostPolicies { get; private set; } = [];
+    public DateTime? PostDate { get; private set; }
+    public Frequency? InterestPostingFrequency { get; private set; }
 
-    public decimal? TaxPercentage { get; protected set; }
-    public OfficeAccount? TaxAccount {get; protected set;}
+    public bool IsMaturityProduct { get; private set; }
+    public int? TenureInDays { get; private set; }
+    public int? TransferCount { get; private set; }
+    public Flow? TransferFlow { get; private set; }
+    public decimal? TransferPenaltyRate { get; private set; }
+    public bool? AllowPremature { get; private set; }
 
-    public int WithdrawalLimitCount { get; protected set; }
-    public Frequency? WithdrawalLimitFrequency { get; protected set; }
-    public decimal WithdrawalLimitAmount { get; protected set; }
-    public Frequency? WithdrawalLimitAmountFrequency { get; protected set; }
-
-    public abstract ProductType ProductType { get; }
-
-    protected Product()
+    private Product()
     {
     }
 
-    protected Product(
+    private Product(
         string productCode,
         string productName,
+        string branchCode,
         Currency currency,
         CustomerType allowedCustomerType,
+        decimal minimumAmount,
+        decimal interestRate,
         Flow interestFlow,
+        bool interestPostToContra,
+        List<InterestPostPolicy> interestPostPolicies,
+        DateTime? postDate,
+        Frequency? interestPostingFrequency,
+        bool isMaturityProduct,
+        ProductType productType,
+        int? tenureInDays,
+        int? transferCount,
+        Flow? transferFlow,
+        decimal? transferPenaltyRate,
+        bool? allowPremature)
+    {
+        ProductId = Guid.NewGuid();
+        ProductCode = productCode;
+        ProductName = productName;
+        BranchCode = branchCode;
+        Currency = currency;
+        AllowedCustomerType = allowedCustomerType;
+        MinimumAmount = minimumAmount;
+        ProductType = productType;
+        InterestRate = interestRate;
+        InterestFlow = interestFlow;
+        InterestPostToContra = interestPostToContra;
+        InterestPostPolicies = interestPostPolicies;
+        PostDate = postDate;
+        InterestPostingFrequency = interestPostingFrequency;
+        IsMaturityProduct = isMaturityProduct;
+        TenureInDays = tenureInDays;
+        TransferCount = transferCount;
+        TransferFlow = transferFlow;
+        TransferPenaltyRate = transferPenaltyRate;
+        AllowPremature = allowPremature;
+    }
+
+    public static Product Create(
+        string productCode,
+        string productName,
+        string branchCode,
+        Currency currency,
+        CustomerType allowedCustomerType,
         decimal interestRate,
         IEnumerable<InterestPostPolicy> interestPostPolicies,
-        Frequency? interestPostingFrequency,
+        bool interestPostToContra,
+        ProductType productType,
         decimal minimumAmount = 0,
-        decimal? taxPercentage = null,
-        int withdrawalLimitCount = 0,
-        Frequency? withdrawalLimitFrequency = null,
-        decimal withdrawalLimitAmount = 0,
-        Frequency? withdrawalLimitAmountFrequency = null)
+        DateTime? postDate = null,
+        Frequency? interestPostingFrequency = null,
+        int? tenureInDays = null,
+        int? transferCount = null,
+        Flow? transferFlow = null,
+        decimal? transferPenaltyRate = null,
+        bool? allowPremature = null)
     {
         if (string.IsNullOrWhiteSpace(productCode))
         {
@@ -62,15 +107,18 @@ public abstract class Product
                 nameof(productName));
         }
 
-        if (minimumAmount < 0)
+        if (string.IsNullOrWhiteSpace(branchCode))
         {
-            throw new ArgumentOutOfRangeException(nameof(minimumAmount));
+            throw new ArgumentException(
+                "Branch code is required.",
+                nameof(branchCode));
         }
 
+        if (minimumAmount < 0)
+            throw new ArgumentOutOfRangeException(nameof(minimumAmount));
+
         if (interestRate < 0)
-        {
             throw new ArgumentOutOfRangeException(nameof(interestRate));
-        }
 
         ArgumentNullException.ThrowIfNull(interestPostPolicies);
 
@@ -78,7 +126,7 @@ public abstract class Product
             .Distinct()
             .ToList();
 
-        if (interestRate > 0 && postingPolicies.Count is 0)
+        if (interestRate > 0 && postingPolicies.Count == 0)
         {
             throw new ArgumentException(
                 "At least one posting policy is required when interest is configured.",
@@ -86,58 +134,97 @@ public abstract class Product
         }
 
         var postsByFrequency = postingPolicies.Contains(
-            InterestPostPolicy.LastDayOfFrequency);
+            InterestPostPolicy.LAST_DAY_OFF_FREQUENCY);
 
         if (postsByFrequency != interestPostingFrequency.HasValue)
         {
             throw new ArgumentException(
-                "Posting frequency must be supplied only when the last-day-of-frequency policy is configured.",
+                "Posting frequency must be supplied only for the last-day-of-frequency policy.",
                 nameof(interestPostingFrequency));
         }
 
-        if (withdrawalLimitCount < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(withdrawalLimitCount));
-        }
+        var postsOnDate = postingPolicies.Contains(
+            InterestPostPolicy.POST_ON_DATE);
 
-        if ((withdrawalLimitCount > 0) != withdrawalLimitFrequency.HasValue)
+        if (postsOnDate != postDate.HasValue)
         {
             throw new ArgumentException(
-                "Withdrawal limit count and frequency must be supplied together.");
+                "Post date must be supplied only for the post-on-date policy.",
+                nameof(postDate));
         }
 
-        if (withdrawalLimitAmount < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(withdrawalLimitAmount));
-        }
+        var isMaturityProduct =
+            productType is ProductType.TERM or ProductType.LOAN;
 
-        if ((withdrawalLimitAmount > 0) != withdrawalLimitAmountFrequency.HasValue)
+        if (postingPolicies.Contains(InterestPostPolicy.ON_MATURITY) &&
+            !isMaturityProduct)
         {
             throw new ArgumentException(
-                "Withdrawal limit amount and amount frequency must be supplied together.");
+                "The on-maturity policy can only be used by term or loan products.",
+                nameof(interestPostPolicies));
         }
 
-        if (taxPercentage is < 0 or > 100)
+        if (isMaturityProduct)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(taxPercentage),
-                "Tax percentage must be between 0 and 100.");
+            if (tenureInDays is null or <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(tenureInDays),
+                    "Term and loan products require a positive tenure.");
+            }
+        }
+        else if (tenureInDays.HasValue)
+        {
+            throw new ArgumentException(
+                "A savings product cannot have a tenure.",
+                nameof(tenureInDays));
         }
 
-        ProductId = Guid.NewGuid();
-        ProductCode = productCode.Trim().ToUpperInvariant();
-        ProductName = productName.Trim();
-        Currency = currency;
-        AllowedCustomerType = allowedCustomerType;
-        MinimumAmount = minimumAmount;
-        InterestFlow = interestFlow;
-        InterestRate = interestRate;
-        InterestPostPolicies = postingPolicies;
-        InterestPostingFrequency = interestPostingFrequency;
-        TaxPercentage = taxPercentage;
-        WithdrawalLimitCount = withdrawalLimitCount;
-        WithdrawalLimitFrequency = withdrawalLimitFrequency;
-        WithdrawalLimitAmount = withdrawalLimitAmount;
-        WithdrawalLimitAmountFrequency = withdrawalLimitAmountFrequency;
+        if (transferCount is < 0)
+            throw new ArgumentOutOfRangeException(nameof(transferCount));
+
+        if (transferCount.HasValue != transferFlow.HasValue)
+        {
+            throw new ArgumentException(
+                "Transfer count and transfer flow must be supplied together.");
+        }
+
+        if (transferPenaltyRate < 0)
+            throw new ArgumentOutOfRangeException(nameof(transferPenaltyRate));
+
+        if (!isMaturityProduct &&
+            (transferCount.HasValue ||
+             transferFlow.HasValue ||
+             transferPenaltyRate.HasValue ||
+             allowPremature.HasValue))
+        {
+            throw new ArgumentException(
+                "Transfer and premature-maturity settings are only valid for term or loan products.");
+        }
+
+        var interestFlow = productType == ProductType.LOAN
+            ? Flow.DEBIT
+            : Flow.CREDIT;
+
+        return new Product(
+            productCode.Trim().ToUpperInvariant(),
+            productName.Trim(),
+            branchCode.Trim().ToUpperInvariant(),
+            currency,
+            allowedCustomerType,
+            minimumAmount,
+            interestRate,
+            interestFlow,
+            interestPostToContra,
+            postingPolicies,
+            postDate,
+            interestPostingFrequency,
+            isMaturityProduct,
+            productType,
+            tenureInDays,
+            transferCount,
+            transferFlow,
+            transferPenaltyRate,
+            isMaturityProduct ? allowPremature ?? false : null);
     }
 }

@@ -235,36 +235,22 @@ public class AppDbContext : DbContext
             .HasMaxLength(200)
             .IsRequired();
 
+        product.Property(p => p.BranchCode)
+            .HasMaxLength(50)
+            .IsRequired();
+
         product.Property(p => p.MinimumAmount)
             .HasPrecision(18, 2);
 
         product.Property(p => p.InterestRate)
             .HasPrecision(18, 6);
 
-        product.Property(p => p.TaxPercentage)
-            .HasPrecision(5, 2);
-
-        product.Property(p => p.WithdrawalLimitAmount)
-            .HasPrecision(18, 2);
+        product.Property(p => p.TransferPenaltyRate)
+            .HasPrecision(18, 6);
 
         product.PrimitiveCollection(p => p.InterestPostPolicies)
             .HasMaxLength(100)
             .IsRequired();
-
-        product.Ignore(p => p.ProductType);
-
-        product.HasDiscriminator<ProductType>("ProductKind")
-            .HasValue<SavingProduct>(ProductType.SAVING)
-            .HasValue<TermProduct>(ProductType.TERM)
-            .HasValue<LoanProduct>(ProductType.LOAN)
-            .HasValue<OfficeProduct>(ProductType.OFFICE);
-
-        product.Property<ProductType>("ProductKind")
-            .HasColumnName("ProductType");
-
-        modelBuilder.Entity<LoanProduct>()
-            .Property(p => p.PenaltyInterestRate)
-            .HasPrecision(18, 6);
     }
 
     private static void ConfigureTransaction(ModelBuilder modelBuilder)

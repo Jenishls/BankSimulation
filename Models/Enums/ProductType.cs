@@ -4,6 +4,5 @@ public enum ProductType
 {
     SAVING,
     TERM,
-    LOAN,
-    OFFICE
+    LOAN
 }

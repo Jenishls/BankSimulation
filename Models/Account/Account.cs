@@ -7,9 +7,9 @@ namespace BankingConsole.Models.Account;
 public abstract class Account
 {
     public Guid AccountId { get; private set; }
-    public string AccountNumber { get; private set; }
-    public string Name {get; private set;}
-    public string BranchCode {get; private set; }
+    public string AccountNumber { get; private set; } =null!;
+    public string Name {get; private set;} =null!;
+    public string BranchCode {get; private set; } =null!;
     public decimal Balance { get; private  set; } = 0m;
     public AccountState State { get; private set; }
     public DateTime AccountOpenDate { get; private set; } = DateTime.UtcNow;
