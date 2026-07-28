@@ -17,24 +17,33 @@ public class AccountRepository : IAccountRepository
         _context.Accounts.Add(account);
     }
 
-    public async Task<Account?> GetAccountByIdAsync(Guid accountId)
+    public async Task<Account?> GetAccountByIdAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
     {
-        return await _context.Accounts.FindAsync(accountId);
+        return await _context.Accounts.FindAsync(
+            [accountId],
+            cancellationToken);
     }
 
-    public async Task<Account?> GetAccountByNumberAsync(string accountNumber)
+    public async Task<Account?> GetAccountByNumberAsync(
+        string accountNumber,
+        CancellationToken cancellationToken = default)
     {
         return await _context.Accounts
         .FirstOrDefaultAsync(
-            account => account.AccountNumber == accountNumber
-            );
+            account => account.AccountNumber == accountNumber,
+            cancellationToken);
     }
 
-    public async Task<IEnumerable<Account>> GetAccountsByCustomerIdAsync(Guid customerId)
+    public async Task<IEnumerable<Account>> GetAccountsByCustomerIdAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default)
     {
         return await _context.Accounts
+        .OfType<CustomerAccount>()
         .Where(account => account.CustomerId == customerId)
-        .ToListAsync();
+        .ToListAsync(cancellationToken);
     }
 
 }

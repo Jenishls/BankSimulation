@@ -13,13 +13,11 @@ public abstract class Account
     public decimal Balance { get; private  set; } = 0m;
     public AccountState State { get; private set; }
     public DateTime AccountOpenDate { get; private set; } = DateTime.UtcNow;
-    public abstract AccountType AccountType{get;}
+    public AccountType AccountType { get; private set; }
 
     [Timestamp]
     public byte[] RowVersion { get; private set; } = [];
     protected Account(){}
-
-    protected abstract string GenerateAccountNumber();
 
     protected Account(
         string accountNumber,
@@ -27,7 +25,8 @@ public abstract class Account
         string branchCode,
         decimal balance,
         AccountState accountState,
-        DateTime accountOpenDate)
+        DateTime accountOpenDate,
+        AccountType accountType)
     {
         if (string.IsNullOrWhiteSpace(accountNumber))
             throw new ArgumentException(
@@ -37,21 +36,22 @@ public abstract class Account
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException(
                 "Account Name is required.",
-                nameof(accountNumber));
+                nameof(name));
 
-        if (branchCode is null)
+        if (string.IsNullOrWhiteSpace(branchCode))
             throw new ArgumentException(
-                "Branch id is required.",
+                "Branch code is required.",
                 nameof(branchCode));
 
 
         AccountId = Guid.NewGuid();
         AccountNumber = accountNumber.Trim();
         Name = name.Trim();
-        BranchCode = branchCode;
+        BranchCode = branchCode.Trim().ToUpperInvariant();
         Balance = balance;
         State = accountState;
         AccountOpenDate = accountOpenDate;
+        AccountType = accountType;
     }
 
     public bool Deposit(decimal amount)

@@ -10,15 +10,15 @@ namespace BankingConsole.Services.Interest.InterestCalculation;
 
 public class InterestService
 {
-    private readonly AccountRepository _accountRepository;
-    private readonly ProductRepository _productRepository;
+    private readonly IAccountRepository _accountRepository;
+    private readonly IProductRepository _productRepository;
     private readonly IInterestCalculator _interestCalculator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<InterestService> _logger;
 
     public InterestService(
-        AccountRepository accountRepository,
-        ProductRepository productRepository,
+        IAccountRepository accountRepository,
+        IProductRepository productRepository,
         IInterestCalculator interestCalculator,
         IUnitOfWork unitOfWork,
         ILogger<InterestService> logger)
@@ -30,9 +30,16 @@ public class InterestService
         _logger = logger; 
     }
     
-    public void InterestCalculation(Account account, CancellationToken cancellationToken)
+    public async Task InterestCalculation(
+        CustomerAccount account,
+        CancellationToken cancellationToken)
     {
-        var product = _productRepository.GetByIdAsync(account.ProductId);
+        var product = await _productRepository.GetByIdAsync(
+            account.ProductId,
+            cancellationToken)
+            ?? throw new InvalidOperationException(
+                $"Product {account.ProductId} was not found.");
+
         decimal interestCalculated = _interestCalculator.Calculate(new InterestCalculatorData
         {
             Balance = account.GetBalance(),
@@ -41,7 +48,7 @@ public class InterestService
 
         account.IncreaseInterestAccured(interestCalculated); // + account.InterestAccured;
 
-        _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }
 

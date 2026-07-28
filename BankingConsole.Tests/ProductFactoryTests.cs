@@ -1,8 +1,5 @@
 using BankingConsole.Factories;
-using BankingConsole.Models.Account;
-using BankingConsole.Models.AccountCreation;
 using BankingConsole.Models.Enums;
-using BankingConsole.Models.Product;
 using BankingConsole.Models.ProductCreation;
 using BankingConsole.Services.Interest.InterestDue;
 using FluentAssertions;
@@ -20,50 +17,50 @@ public sealed class ProductFactoryTests
         {
             ProductCode = "save-01",
             ProductName = "Everyday Savings",
+            BranchCode = "ber",
             ProductType = ProductType.SAVING,
             Currency = Currency.EUR,
             AllowedCustomerType = CustomerType.ALL,
             InterestRate = 4.5m,
+            InterestOfficeAccountId = Guid.NewGuid(),
+            TaxOfficeAccountId = Guid.NewGuid(),
             InterestPostPolicies =
-                [InterestPostPolicy.LastDayOfFrequency],
-            InterestPostingFrequency = Frequency.Monthly
+                [InterestPostPolicy.LAST_DAY_OFF_FREQUENCY],
+            InterestPostingFrequency = Frequency.MONTHLY
         });
 
-        var savingProduct = product.Should()
-            .BeOfType<SavingProduct>()
-            .Subject;
-
-        savingProduct.ProductCode.Should().Be("SAVE-01");
-        savingProduct.ProductType.Should().Be(ProductType.SAVING);
-        savingProduct.InterestFlow.Should().Be(Flow.CREDIT);
-        savingProduct.InterestRate.Should().Be(4.5m);
+        product.ProductCode.Should().Be("SAVE-01");
+        product.BranchCode.Should().Be("BER");
+        product.ProductType.Should().Be(ProductType.SAVING);
+        product.InterestFlow.Should().Be(Flow.CREDIT);
+        product.InterestRate.Should().Be(4.5m);
+        product.IsMaturityProduct.Should().BeFalse();
     }
 
     [Fact]
-    public void Create_TermProduct_SupportsMaturityPosting()
+    public void Create_FixedDeposit_SupportsMaturityPosting()
     {
         var product = _factory.Create(new ProductCreationData
         {
             ProductCode = "term-01",
-            ProductName = "One Year Deposit",
+            ProductName = "One Year Fixed Deposit",
+            BranchCode = "ber",
             ProductType = ProductType.TERM,
             Currency = Currency.EUR,
             AllowedCustomerType = CustomerType.INDIVIDUAL,
             InterestRate = 5m,
-            InterestPostPolicies = [InterestPostPolicy.Maturity],
-            TenureInDays = 365,
-            TransferCount = 1,
-            TransferFrequency = Frequency.Yearly
+            InterestOfficeAccountId = Guid.NewGuid(),
+            TaxOfficeAccountId = Guid.NewGuid(),
+            InterestPostPolicies =
+                [InterestPostPolicy.ON_MATURITY],
+            TenureInDays = 365
         });
 
-        var termProduct = product.Should()
-            .BeOfType<TermProduct>()
-            .Subject;
-
-        termProduct.ProductType.Should().Be(ProductType.TERM);
-        termProduct.InterestFlow.Should().Be(Flow.CREDIT);
-        termProduct.InterestPostingFrequency.Should().BeNull();
-        termProduct.TenureInDays.Should().Be(365);
+        product.ProductType.Should().Be(ProductType.TERM);
+        product.InterestFlow.Should().Be(Flow.CREDIT);
+        product.InterestPostingFrequency.Should().BeNull();
+        product.TenureInDays.Should().Be(365);
+        product.IsMaturityProduct.Should().BeTrue();
     }
 
     [Fact]
@@ -73,72 +70,48 @@ public sealed class ProductFactoryTests
         {
             ProductCode = "loan-01",
             ProductName = "Personal Loan",
+            BranchCode = "ber",
             ProductType = ProductType.LOAN,
             Currency = Currency.EUR,
             AllowedCustomerType = CustomerType.INDIVIDUAL,
             InterestRate = 8m,
+            InterestOfficeAccountId = Guid.NewGuid(),
+            TaxOfficeAccountId = Guid.NewGuid(),
             InterestPostPolicies =
-                [InterestPostPolicy.LastDayOfFrequency],
-            InterestPostingFrequency = Frequency.Monthly,
-            TenureInDays = 365,
-            RepaymentCount = 12,
-            RepaymentFrequency = Frequency.Monthly
+                [InterestPostPolicy.LAST_DAY_OFF_FREQUENCY],
+            InterestPostingFrequency = Frequency.MONTHLY,
+            TenureInDays = 365
         });
 
-        var loanProduct = product.Should()
-            .BeOfType<LoanProduct>()
-            .Subject;
-
-        loanProduct.ProductType.Should().Be(ProductType.LOAN);
-        loanProduct.InterestFlow.Should().Be(Flow.DEBIT);
-        loanProduct.RepaymentCount.Should().Be(12);
+        product.ProductType.Should().Be(ProductType.LOAN);
+        product.InterestFlow.Should().Be(Flow.DEBIT);
+        product.IsMaturityProduct.Should().BeTrue();
     }
 
     [Fact]
-    public void Create_OfficeProduct_UsesConfiguredInternalFlow()
+    public void Create_Product_KeepsSingleInterestAndTaxOfficeAccounts()
     {
+        var interestAccountId = Guid.NewGuid();
+        var taxAccountId = Guid.NewGuid();
+
         var product = _factory.Create(new ProductCreationData
         {
-            ProductCode = "office-01",
-            ProductName = "Interest Expense",
-            ProductType = ProductType.OFFICE,
+            ProductCode = "save-accounts",
+            ProductName = "Savings With Posting Accounts",
+            BranchCode = "ber",
+            ProductType = ProductType.SAVING,
             Currency = Currency.EUR,
-            OfficeInterestFlow = Flow.DEBIT
+            AllowedCustomerType = CustomerType.ALL,
+            InterestRate = 2m,
+            InterestOfficeAccountId = interestAccountId,
+            TaxOfficeAccountId = taxAccountId,
+            InterestPostPolicies =
+                [InterestPostPolicy.LAST_DAY_OFF_FREQUENCY],
+            InterestPostingFrequency = Frequency.MONTHLY
         });
 
-        var officeProduct = product.Should()
-            .BeOfType<OfficeProduct>()
-            .Subject;
-
-        officeProduct.ProductType.Should().Be(ProductType.OFFICE);
-        officeProduct.InterestFlow.Should().Be(Flow.DEBIT);
-        officeProduct.InterestRate.Should().Be(0);
-        officeProduct.InterestPostPolicies.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void AccountFactory_CreateOfficeAccount_HasNoCustomerOwner()
-    {
-        var factory = new AccountFactory();
-
-        var account = factory.Create(new AccountCreationData
-        {
-            ProductId = Guid.NewGuid(),
-            ProductType = ProductType.OFFICE,
-            BranchCode = "BER",
-            Office = new OfficeAccountCreationData
-            {
-                OpeningBalance = 100m
-            }
-        });
-
-        var officeAccount = account.Should()
-            .BeOfType<OfficeAccount>()
-            .Subject;
-
-        officeAccount.CustomerId.Should().BeNull();
-        officeAccount.Balance.Should().Be(100m);
-        officeAccount.AccountNumber.Should().StartWith("BEROF");
+        product.InterestOfficeAccountId.Should().Be(interestAccountId);
+        product.TaxOfficeAccountId.Should().Be(taxAccountId);
     }
 
     [Fact]
@@ -153,8 +126,8 @@ public sealed class ProductFactoryTests
 
         var policies = resolver.Resolve(
             [
-                InterestPostPolicy.LastDayOfFrequency,
-                InterestPostPolicy.Maturity
+                InterestPostPolicy.LAST_DAY_OFF_FREQUENCY,
+                InterestPostPolicy.ON_MATURITY
             ]);
 
         policies.Should().ContainSingle(

@@ -1,4 +1,3 @@
-using BankingConsole.Models;
 using BankingConsole.Models.Account;
 using BankingConsole.Models.AccountCreation;
 using BankingConsole.Models.Enums;
@@ -10,142 +9,150 @@ namespace BankingConsole.Factories;
 
 public sealed class AccountFactory : IAccountFactory
 {
-    public AccountEntity Create(AccountCreationData data)
+    private readonly AccountNumberGeneratorService _accountNumberGenerator;
+
+    public AccountFactory(
+        AccountNumberGeneratorService accountNumberGenerator)
+    {
+        _accountNumberGenerator = accountNumberGenerator;
+    }
+
+    public AccountEntity Create(
+        AccountCreationData data,
+        Product? product = null)
     {
         ArgumentNullException.ThrowIfNull(data);
+        ValidateCommonData(data, product);
 
-        ValidateCommonData(data);
+        var branchCode = data.AccountType == AccountType.CUSTOMER
+            ? product!.BranchCode
+            : data.BranchCode!;
 
-        var accountNumber = data.BranchCode + data.ProductType.ToString().Substring(0,2) + Guid.NewGuid().ToString("N")[..12];
-        return data.ProductType switch
+        var accountNumber = _accountNumberGenerator.Generate(
+            branchCode,
+            data.AccountType,
+            product?.ProductType);
+
+        return data.AccountType switch
         {
-            ProductType.TERM =>
-                CreateTerm(data, accountNumber),
-
-            ProductType.LOAN =>
-                CreateLoan(data, accountNumber),
-
-            ProductType.SAVING =>
-                CreateSaving(data, accountNumber),
-
-            ProductType.OFFICE =>
-                CreateOffice(data, accountNumber),
-
+            AccountType.CUSTOMER => CreateCustomer(
+                data,
+                product!,
+                accountNumber),
+            AccountType.OFFICE => CreateOffice(data, accountNumber),
             _ => throw new ArgumentOutOfRangeException(
-                nameof(data.ProductType),
-                "Unsupported product type.")
+                nameof(data.AccountType),
+                data.AccountType,
+                "Unsupported account type.")
         };
     }
 
-    private static TermAccount CreateTerm(
+    private static CustomerAccount CreateCustomer(
         AccountCreationData data,
+        Product product,
         string accountNumber)
     {
-        var details = data.Term
+        var customerId = data.CustomerId
             ?? throw new ArgumentException(
-                "Term-account details are required.",
-                nameof(data));
+                "Customer id is required for a customer account.",
+                nameof(data.CustomerId));
 
-        return TermAccount.Create(
+        if (data.ProductId != product.ProductId)
+        {
+            throw new ArgumentException(
+                "The supplied product does not match the requested product id.",
+                nameof(product));
+        }
+
+        return CustomerAccount.Create(
             accountNumber,
-            RequiredCustomerId(data),
-            data.ProductId,
-            data.BranchCode,
-            details.Principal,
-            details.MaturityDate,
-            details.FundingAccountId);
-    }
-
-    private static SavingAccount CreateSaving(
-        AccountCreationData data,
-        string accountNumber)
-    {
-        var details = data.Saving
-            ?? throw new ArgumentException(
-                "Saving-account details are required.",
-                nameof(data));
-
-        return SavingAccount.Create(
-            accountNumber,
-            RequiredCustomerId(data),
-            data.ProductId,
-            data.BranchCode,
-            details.OpeningBalance
-            );
-    }
-
-    private static LoanAccount CreateLoan(
-        AccountCreationData data,
-        string accountNumber)
-    {
-        var details = data.Loan
-            ?? throw new ArgumentException(
-                "Loan-account details are required.",
-                nameof(data));
-
-        return LoanAccount.Create(
-            accountNumber,
-            RequiredCustomerId(data),
-            data.ProductId,
-            data.BranchCode,
-            details.Principal,
-            details.DisbursementAccountId,
-            details.RepaymentInstallments);
+            data.Name,
+            customerId,
+            product.ProductId,
+            product.ProductType,
+            product.BranchCode,
+            data.OpeningBalance,
+            data.Principal,
+            product.TenureInDays,
+            data.FundingAccountId,
+            data.MaturitySettlementAccountId,
+            data.DisbursementAccountId,
+            data.RepaymentAccountId,
+            data.RepaymentInstallments);
     }
 
     private static OfficeAccount CreateOffice(
         AccountCreationData data,
         string accountNumber)
     {
-        var details = data.Office
+        var officeAccountType = data.OfficeAccountType
             ?? throw new ArgumentException(
-                "Office-account details are required.",
-                nameof(data));
+                "Office account type is required for an office account.",
+                nameof(data.OfficeAccountType));
 
         return OfficeAccount.Create(
             accountNumber,
-            data.ProductId,
-            data.BranchCode,
-            details.OpeningBalance);
+            data.Name,
+            data.BranchCode!,
+            officeAccountType,
+            data.OpeningBalance);
     }
 
-    private static Guid RequiredCustomerId(AccountCreationData data)
+    private static void ValidateCommonData(
+        AccountCreationData data,
+        Product? product)
     {
-        return data.CustomerId
-            ?? throw new ArgumentException(
-                "Customer id is required for customer-owned accounts.",
-                nameof(data.CustomerId));
-    }
-
-    private static void ValidateCommonData(AccountCreationData data)
-    {
-        if (data.ProductType is ProductType.OFFICE)
+        if (string.IsNullOrWhiteSpace(data.Name))
         {
-            if (data.CustomerId.HasValue)
+            throw new ArgumentException(
+                "Account name is required.",
+                nameof(data.Name));
+        }
+
+        if (data.AccountType == AccountType.CUSTOMER &&
+            product is null)
+        {
+            throw new ArgumentException(
+                "A product is required to create a customer account.",
+                nameof(product));
+        }
+
+        if (data.AccountType == AccountType.CUSTOMER &&
+            data.OfficeAccountType.HasValue)
+        {
+            throw new ArgumentException(
+                "Customer accounts cannot have an office account type.",
+                nameof(data.OfficeAccountType));
+        }
+
+        if (data.AccountType == AccountType.OFFICE)
+        {
+            if (string.IsNullOrWhiteSpace(data.BranchCode))
             {
                 throw new ArgumentException(
-                    "Office accounts cannot be assigned to a customer.",
-                    nameof(data.CustomerId));
+                    "Branch code is required for an office account.",
+                    nameof(data.BranchCode));
             }
-        }
-        else if (!data.CustomerId.HasValue ||
-                 data.CustomerId.Value == Guid.Empty)
-        {
-            throw new ArgumentException(
-                "Customer id is required.",
-                nameof(data.CustomerId));
-        }
 
-        if (data.ProductId == Guid.Empty)
-            throw new ArgumentException(
-                "Product id is required.",
-                nameof(data.ProductId));
+            if (product is not null)
+            {
+                throw new ArgumentException(
+                    "Office accounts cannot be associated with a product.",
+                    nameof(product));
+            }
 
-        if (string.IsNullOrWhiteSpace(data.BranchCode))
-        {
-            throw new ArgumentException(
-                "Branch code is required.",
-                nameof(data.BranchCode));
+            if (data.CustomerId.HasValue ||
+                data.ProductId.HasValue ||
+                data.Principal.HasValue ||
+                data.FundingAccountId.HasValue ||
+                data.MaturitySettlementAccountId.HasValue ||
+                data.DisbursementAccountId.HasValue ||
+                data.RepaymentAccountId.HasValue ||
+                data.RepaymentInstallments.HasValue)
+            {
+                throw new ArgumentException(
+                    "Office accounts cannot have a customer or product.");
+            }
         }
     }
 }

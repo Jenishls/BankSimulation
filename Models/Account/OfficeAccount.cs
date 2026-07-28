@@ -4,8 +4,7 @@ namespace BankingConsole.Models.Account;
 
 public sealed class OfficeAccount : Account
 {
-    private OfficeAccountType OfficeAccountType{get; set;}
-    public override AccountType AccountType => AccountType.OFFICE;
+    public OfficeAccountType OfficeAccountType { get; private set; }
 
     private OfficeAccount()
     {
@@ -15,45 +14,32 @@ public sealed class OfficeAccount : Account
         string accountNumber,
         string name,
         string branchCode,
-        AccountState state,
-        DateTime accountOpenDate,
         OfficeAccountType officeAccountType,
-        decimal balance
-        )
+        decimal openingBalance)
         : base(
             accountNumber,
             name,
             branchCode,
-            balance,
-            state,
-            accountOpenDate
-            )
-    {}
-
-    public static OfficeAccount Create(
-
-        string name,
-        string branchCode,
-        AccountState state,
-        OfficeAccountType officeAcountType
-        )
-    {
-        var account = new OfficeAccount();
-            
-        return new OfficeAccount(
-            account.GenerateAccountNumber(),
-            name,
-            branchCode,
-            state,
+            openingBalance,
+            AccountState.ACTIVE,
             DateTime.UtcNow,
-            officeAcountType,
-            0
-            );
+            AccountType.OFFICE)
+    {
+        OfficeAccountType = officeAccountType;
     }
 
-    protected override string GenerateAccountNumber()
+    public static OfficeAccount Create(
+        string accountNumber,
+        string name,
+        string branchCode,
+        OfficeAccountType officeAccountType,
+        decimal openingBalance = 0)
     {
-        string acc = "O" + new Random().ToString();
-        return acc;
+        return new OfficeAccount(
+            accountNumber,
+            name,
+            branchCode,
+            officeAccountType,
+            openingBalance);
     }
 }

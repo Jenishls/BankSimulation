@@ -15,7 +15,8 @@ public sealed class Product
 
     public decimal InterestRate { get; private set; }
     public Flow InterestFlow { get; private set; }
-    public bool InterestPostToContra { get; private set; }
+    public Guid InterestOfficeAccountId { get; private set; }
+    public Guid TaxOfficeAccountId { get; private set; }
     public List<InterestPostPolicy> InterestPostPolicies { get; private set; } = [];
     public DateTime? PostDate { get; private set; }
     public Frequency? InterestPostingFrequency { get; private set; }
@@ -40,7 +41,8 @@ public sealed class Product
         decimal minimumAmount,
         decimal interestRate,
         Flow interestFlow,
-        bool interestPostToContra,
+        Guid interestOfficeAccountId,
+        Guid taxOfficeAccountId,
         List<InterestPostPolicy> interestPostPolicies,
         DateTime? postDate,
         Frequency? interestPostingFrequency,
@@ -62,7 +64,8 @@ public sealed class Product
         ProductType = productType;
         InterestRate = interestRate;
         InterestFlow = interestFlow;
-        InterestPostToContra = interestPostToContra;
+        InterestOfficeAccountId = interestOfficeAccountId;
+        TaxOfficeAccountId = taxOfficeAccountId;
         InterestPostPolicies = interestPostPolicies;
         PostDate = postDate;
         InterestPostingFrequency = interestPostingFrequency;
@@ -82,7 +85,8 @@ public sealed class Product
         CustomerType allowedCustomerType,
         decimal interestRate,
         IEnumerable<InterestPostPolicy> interestPostPolicies,
-        bool interestPostToContra,
+        Guid interestOfficeAccountId,
+        Guid taxOfficeAccountId,
         ProductType productType,
         decimal minimumAmount = 0,
         DateTime? postDate = null,
@@ -119,6 +123,20 @@ public sealed class Product
 
         if (interestRate < 0)
             throw new ArgumentOutOfRangeException(nameof(interestRate));
+
+        if (interestOfficeAccountId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "An interest office account is required.",
+                nameof(interestOfficeAccountId));
+        }
+
+        if (taxOfficeAccountId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "A tax office account is required.",
+                nameof(taxOfficeAccountId));
+        }
 
         ArgumentNullException.ThrowIfNull(interestPostPolicies);
 
@@ -215,7 +233,8 @@ public sealed class Product
             minimumAmount,
             interestRate,
             interestFlow,
-            interestPostToContra,
+            interestOfficeAccountId,
+            taxOfficeAccountId,
             postingPolicies,
             postDate,
             interestPostingFrequency,

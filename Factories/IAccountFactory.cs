@@ -7,5 +7,7 @@ namespace BankingConsole.Factories;
 
 public interface IAccountFactory
 {
-    AccountEntity Create(AccountCreationData data);
+    AccountEntity Create(
+        AccountCreationData data,
+        Product? product = null);
 }

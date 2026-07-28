@@ -4,5 +4,9 @@ namespace BankingConsole.Repository;
 
 public interface IProductRepository
 {
-    Product GetByIdAsync(Guid productId);
+    void Add(Product product);
+
+    Task<Product?> GetByIdAsync(
+        Guid productId,
+        CancellationToken cancellationToken = default);
 }

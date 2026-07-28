@@ -3,6 +3,7 @@ using BankingConsole.Factories;
 using BankingConsole.Middleware;
 using BankingConsole.Repository;
 using BankingConsole.Services;
+using BankingConsole.Services.Interest.InterestCalculation;
 using BankingConsole.Services.Interest.InterestDue;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -30,20 +31,25 @@ builder.Services.AddDbContext<AppDbContext>(
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<ITransactionActionRepository, TransactionActionRepository>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<ICustomerActionRepository, CustomerActionRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-builder.Services.AddScoped<AccountFactory>();
+builder.Services.AddSingleton<AccountNumberGeneratorService>();
+builder.Services.AddScoped<IAccountFactory, AccountFactory>();
 builder.Services.AddScoped<ICustomerFactory, CustomerFactory>();
 builder.Services.AddScoped<IProductFactory, ProductFactory>();
 builder.Services.AddSingleton<IInterestPostPolicy, LastDayOfFrequencyPolicy>();
 builder.Services.AddSingleton<IInterestPostPolicy, MaturityPolicy>();
 builder.Services.AddSingleton<IInterestPostPolicy, PostDatePolicy>();
 builder.Services.AddSingleton<IInterestPostResolver, InterestPostResolver>();
+builder.Services.AddSingleton<IInterestCalculator, SimpleInterestCalculator>();
 builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<CustomerService>();
+builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<InterestService>();
 
 var app = builder.Build();
 

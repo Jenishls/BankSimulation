@@ -41,12 +41,12 @@ public class LedgerEntryTests
         public TestAccount()
             : base(
                 "TEST-001",
-                Guid.NewGuid(),
-                Guid.NewGuid(),
-                Guid.NewGuid(),
+                "Test Account",
+                "BER",
                 0m,
                 AccountState.ACTIVE,
-                DateTime.UtcNow)
+                DateTime.UtcNow,
+                AccountType.CUSTOMER)
         {
         }
     }

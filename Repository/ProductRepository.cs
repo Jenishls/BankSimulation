@@ -9,8 +9,18 @@ public class ProductRepository : IProductRepository
     {
         _context = context;
     }
-    public Product GetByIdAsync(Guid productId)
+
+    public void Add(Product product)
     {
-        return _context.Products.FirstOrDefault(productId);
+        _context.Products.Add(product);
+    }
+
+    public async Task<Product?> GetByIdAsync(
+        Guid productId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Products.FindAsync(
+            [productId],
+            cancellationToken);
     }
 }

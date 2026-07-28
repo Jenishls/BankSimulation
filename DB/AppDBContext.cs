@@ -178,44 +178,58 @@ public class AppDbContext : DbContext
         account.Property(a => a.Balance)
             .HasPrecision(18, 2);
 
-        account.Property(a => a.InterestAccured)
-            .HasPrecision(18, 2);
-
         account.Property(a => a.RowVersion)
             .IsRowVersion();
 
         account.HasIndex(a => a.AccountNumber)
             .IsUnique();
 
-        account.HasDiscriminator<string>("AccountType")
-            .HasValue<SavingAccount>("SAVING")
-            .HasValue<TermAccount>("TERM")
-            .HasValue<LoanAccount>("LOAN")
-            .HasValue<OfficeAccount>("OFFICE");
+        account.HasDiscriminator(a => a.AccountType)
+            .HasValue<CustomerAccount>(AccountType.CUSTOMER)
+            .HasValue<OfficeAccount>(AccountType.OFFICE);
 
-        account.HasOne<Customer>()
+        var customerAccount = modelBuilder.Entity<CustomerAccount>();
+
+        customerAccount.Property(a => a.InterestAccured)
+            .HasPrecision(18, 2);
+
+        customerAccount.Property(a => a.Principal)
+            .HasPrecision(18, 2);
+
+        customerAccount.Property(a => a.OutstandingPrincipal)
+            .HasPrecision(18, 2);
+
+        customerAccount.HasOne<Customer>()
             .WithMany()
             .HasForeignKey(a => a.CustomerId)
-            .IsRequired(false)
+            .IsRequired()
             .OnDelete(DeleteBehavior.Restrict);
 
-        account.HasOne<Product>()
+        customerAccount.HasOne<Product>()
             .WithMany()
             .HasForeignKey(a => a.ProductId)
             .IsRequired()
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<TermAccount>()
-            .Property(a => a.Principal)
-            .HasPrecision(18, 2);
+        customerAccount.HasOne<CustomerAccount>()
+            .WithMany()
+            .HasForeignKey(a => a.FundingAccountId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<LoanAccount>()
-            .Property(a => a.OriginalPrincipal)
-            .HasPrecision(18, 2);
+        customerAccount.HasOne<CustomerAccount>()
+            .WithMany()
+            .HasForeignKey(a => a.MaturitySettlementAccountId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<LoanAccount>()
-            .Property(a => a.OutstandingPrincipal)
-            .HasPrecision(18, 2);
+        customerAccount.HasOne<CustomerAccount>()
+            .WithMany()
+            .HasForeignKey(a => a.DisbursementAccountId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        customerAccount.HasOne<CustomerAccount>()
+            .WithMany()
+            .HasForeignKey(a => a.RepaymentAccountId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureProduct(ModelBuilder modelBuilder)
@@ -251,6 +265,18 @@ public class AppDbContext : DbContext
         product.PrimitiveCollection(p => p.InterestPostPolicies)
             .HasMaxLength(100)
             .IsRequired();
+
+        product.HasOne<OfficeAccount>()
+            .WithMany()
+            .HasForeignKey(p => p.InterestOfficeAccountId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Restrict);
+
+        product.HasOne<OfficeAccount>()
+            .WithMany()
+            .HasForeignKey(p => p.TaxOfficeAccountId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureTransaction(ModelBuilder modelBuilder)

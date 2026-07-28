@@ -5,7 +5,7 @@ namespace BankingConsole.Services.Interest.InterestDue;
 
 public sealed class MaturityPolicy : IInterestPostPolicy
 {
-    public InterestPostPolicy Policy => InterestPostPolicy.Maturity;
+    public InterestPostPolicy Policy => InterestPostPolicy.ON_MATURITY;
 
     public bool IsDue(IsDueResolverData data)
     {

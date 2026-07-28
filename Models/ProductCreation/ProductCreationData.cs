@@ -13,7 +13,8 @@ public sealed class ProductCreationData
     public ProductType ProductType { get; init; }
 
     public decimal InterestRate { get; init; }
-    public bool InterestPostToContra { get; init; }
+    public required Guid InterestOfficeAccountId { get; init; }
+    public required Guid TaxOfficeAccountId { get; init; }
     public List<InterestPostPolicy> InterestPostPolicies { get; init; } = [];
     public DateTime? PostDate { get; init; }
     public Frequency? InterestPostingFrequency { get; init; }
