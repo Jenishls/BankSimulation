@@ -17,6 +17,7 @@ public sealed class Product
     public Flow InterestFlow { get; private set; }
     public Guid InterestOfficeAccountId { get; private set; }
     public Guid TaxOfficeAccountId { get; private set; }
+    public bool PostInterestToLinkedAccount { get; private set; }
     public List<InterestPostPolicy> InterestPostPolicies { get; private set; } = [];
     public DateTime? PostDate { get; private set; }
     public Frequency? InterestPostingFrequency { get; private set; }
@@ -43,6 +44,7 @@ public sealed class Product
         Flow interestFlow,
         Guid interestOfficeAccountId,
         Guid taxOfficeAccountId,
+        bool postInterestToLinkedAccount,
         List<InterestPostPolicy> interestPostPolicies,
         DateTime? postDate,
         Frequency? interestPostingFrequency,
@@ -66,6 +68,7 @@ public sealed class Product
         InterestFlow = interestFlow;
         InterestOfficeAccountId = interestOfficeAccountId;
         TaxOfficeAccountId = taxOfficeAccountId;
+        PostInterestToLinkedAccount = postInterestToLinkedAccount;
         InterestPostPolicies = interestPostPolicies;
         PostDate = postDate;
         InterestPostingFrequency = interestPostingFrequency;
@@ -88,6 +91,7 @@ public sealed class Product
         Guid interestOfficeAccountId,
         Guid taxOfficeAccountId,
         ProductType productType,
+        bool postInterestToLinkedAccount = false,
         decimal minimumAmount = 0,
         DateTime? postDate = null,
         Frequency? interestPostingFrequency = null,
@@ -174,6 +178,13 @@ public sealed class Product
         var isMaturityProduct =
             productType is ProductType.TERM or ProductType.LOAN;
 
+        if (postInterestToLinkedAccount && !isMaturityProduct)
+        {
+            throw new ArgumentException(
+                "Only term and loan products can post interest to a linked account.",
+                nameof(postInterestToLinkedAccount));
+        }
+
         if (postingPolicies.Contains(InterestPostPolicy.ON_MATURITY) &&
             !isMaturityProduct)
         {
@@ -235,6 +246,7 @@ public sealed class Product
             interestFlow,
             interestOfficeAccountId,
             taxOfficeAccountId,
+            postInterestToLinkedAccount,
             postingPolicies,
             postDate,
             interestPostingFrequency,

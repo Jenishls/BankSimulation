@@ -5,6 +5,7 @@ using BankingConsole.Repository;
 using BankingConsole.Services;
 using BankingConsole.Services.Interest.InterestCalculation;
 using BankingConsole.Services.Interest.InterestDue;
+using BankingConsole.Services.Interest.InterestPosting;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -50,6 +51,7 @@ builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<InterestService>();
+builder.Services.AddScoped<InterestPostingService>();
 
 var app = builder.Build();
 

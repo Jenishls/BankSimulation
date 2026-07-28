@@ -208,6 +208,25 @@ public sealed class CustomerAccount : Account
         InterestAccured += amount;
     }
 
+    public void MarkInterestPosted(DateTime postedOn)
+    {
+        if (InterestAccured <= 0)
+        {
+            throw new InvalidOperationException(
+                "There is no accrued interest to post.");
+        }
+
+        if (postedOn < InterestPostedOn)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(postedOn),
+                "Interest cannot be posted before the previous posting date.");
+        }
+
+        InterestAccured = 0;
+        InterestPostedOn = postedOn;
+    }
+
     private static void ValidatePrincipal(decimal? principal)
     {
         if (principal is null or <= 0)

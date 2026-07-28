@@ -15,6 +15,7 @@ public sealed class ProductCreationData
     public decimal InterestRate { get; init; }
     public required Guid InterestOfficeAccountId { get; init; }
     public required Guid TaxOfficeAccountId { get; init; }
+    public bool PostInterestToLinkedAccount { get; init; }
     public List<InterestPostPolicy> InterestPostPolicies { get; init; } = [];
     public DateTime? PostDate { get; init; }
     public Frequency? InterestPostingFrequency { get; init; }
