@@ -105,6 +105,7 @@ public sealed class ProductFactoryTests
             InterestRate = 2m,
             InterestOfficeAccountId = interestAccountId,
             TaxOfficeAccountId = taxAccountId,
+            TaxRate = 15m,
             InterestPostPolicies =
                 [InterestPostPolicy.LAST_DAY_OFF_FREQUENCY],
             InterestPostingFrequency = Frequency.MONTHLY
@@ -112,6 +113,32 @@ public sealed class ProductFactoryTests
 
         product.InterestOfficeAccountId.Should().Be(interestAccountId);
         product.TaxOfficeAccountId.Should().Be(taxAccountId);
+        product.TaxRate.Should().Be(15m);
+    }
+
+    [Fact]
+    public void Create_LoanProduct_RejectsWithholdingTax()
+    {
+        var action = () => _factory.Create(new ProductCreationData
+        {
+            ProductCode = "loan-tax",
+            ProductName = "Loan With Invalid Withholding Tax",
+            BranchCode = "ber",
+            ProductType = ProductType.LOAN,
+            Currency = Currency.EUR,
+            AllowedCustomerType = CustomerType.ALL,
+            InterestRate = 8m,
+            InterestOfficeAccountId = Guid.NewGuid(),
+            TaxOfficeAccountId = Guid.NewGuid(),
+            TaxRate = 10m,
+            InterestPostPolicies =
+                [InterestPostPolicy.LAST_DAY_OFF_FREQUENCY],
+            InterestPostingFrequency = Frequency.MONTHLY,
+            TenureInDays = 365
+        });
+
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("*debit-interest*");
     }
 
     [Fact]

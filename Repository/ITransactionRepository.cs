@@ -6,7 +6,10 @@ namespace BankingConsole.Repository;
 public interface ITransactionRepository
 {
     void Add(Transaction transaction);
-    Task<Transaction?> GetByIdAsync(Guid transactionId);
-    Task<Transaction?> GetByIdempotencyKeyAsync(Guid idempotencyKey);
-    void Update(Transaction transaction);
+    Task<Transaction?> GetByIdAsync(
+        Guid transactionId,
+        CancellationToken cancellationToken = default);
+    Task<Transaction?> GetByIdempotencyKeyAsync(
+        Guid idempotencyKey,
+        CancellationToken cancellationToken = default);
 }

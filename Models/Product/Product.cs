@@ -17,6 +17,7 @@ public sealed class Product
     public Flow InterestFlow { get; private set; }
     public Guid InterestOfficeAccountId { get; private set; }
     public Guid TaxOfficeAccountId { get; private set; }
+    public decimal TaxRate { get; private set; }
     public bool PostInterestToLinkedAccount { get; private set; }
     public List<InterestPostPolicy> InterestPostPolicies { get; private set; } = [];
     public DateTime? PostDate { get; private set; }
@@ -44,6 +45,7 @@ public sealed class Product
         Flow interestFlow,
         Guid interestOfficeAccountId,
         Guid taxOfficeAccountId,
+        decimal taxRate,
         bool postInterestToLinkedAccount,
         List<InterestPostPolicy> interestPostPolicies,
         DateTime? postDate,
@@ -68,6 +70,7 @@ public sealed class Product
         InterestFlow = interestFlow;
         InterestOfficeAccountId = interestOfficeAccountId;
         TaxOfficeAccountId = taxOfficeAccountId;
+        TaxRate = taxRate;
         PostInterestToLinkedAccount = postInterestToLinkedAccount;
         InterestPostPolicies = interestPostPolicies;
         PostDate = postDate;
@@ -91,6 +94,7 @@ public sealed class Product
         Guid interestOfficeAccountId,
         Guid taxOfficeAccountId,
         ProductType productType,
+        decimal taxRate = 0,
         bool postInterestToLinkedAccount = false,
         decimal minimumAmount = 0,
         DateTime? postDate = null,
@@ -140,6 +144,20 @@ public sealed class Product
             throw new ArgumentException(
                 "A tax office account is required.",
                 nameof(taxOfficeAccountId));
+        }
+
+        if (taxRate is < 0 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(taxRate),
+                "Tax rate must be between 0 and 100 percent.");
+        }
+
+        if (productType == ProductType.LOAN && taxRate > 0)
+        {
+            throw new ArgumentException(
+                "Withholding tax cannot be configured for debit-interest products.",
+                nameof(taxRate));
         }
 
         ArgumentNullException.ThrowIfNull(interestPostPolicies);
@@ -246,6 +264,7 @@ public sealed class Product
             interestFlow,
             interestOfficeAccountId,
             taxOfficeAccountId,
+            taxRate,
             postInterestToLinkedAccount,
             postingPolicies,
             postDate,

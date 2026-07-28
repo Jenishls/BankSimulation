@@ -3,9 +3,11 @@ using BankingConsole.Factories;
 using BankingConsole.Middleware;
 using BankingConsole.Repository;
 using BankingConsole.Services;
+using BankingConsole.Services.Interest;
 using BankingConsole.Services.Interest.InterestCalculation;
 using BankingConsole.Services.Interest.InterestDue;
 using BankingConsole.Services.Interest.InterestPosting;
+using BankingConsole.Services.Interest.InterestTax;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -46,12 +48,14 @@ builder.Services.AddSingleton<IInterestPostPolicy, MaturityPolicy>();
 builder.Services.AddSingleton<IInterestPostPolicy, PostDatePolicy>();
 builder.Services.AddSingleton<IInterestPostResolver, InterestPostResolver>();
 builder.Services.AddSingleton<IInterestCalculator, SimpleInterestCalculator>();
+builder.Services.AddSingleton<IInterestTaxCalculator, InterestTaxCalculator>();
 builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<ProductService>();
-builder.Services.AddScoped<InterestService>();
+builder.Services.AddScoped<InterestCalculationService>();
 builder.Services.AddScoped<InterestPostingService>();
+builder.Services.AddScoped<InterestEngine>();
 
 var app = builder.Build();
 

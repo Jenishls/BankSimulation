@@ -5,5 +5,6 @@ public enum EntryType
     DEPOSIT,
     WITHDRAWAL,
     TRANSFER,
-    INTEREST
+    INTEREST,
+    TAX
 }

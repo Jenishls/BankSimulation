@@ -8,6 +8,7 @@ public sealed class CustomerAccount : Account
     public Guid ProductId { get; private set; }
     public ProductType ProductType { get; private set; }
     public decimal InterestAccured { get; private set; }
+    public DateTime? InterestCalculatedOn { get; private set; }
     public DateTime InterestPostedOn { get; private set; }
     public decimal? Principal { get; private set; }
     public decimal? OutstandingPrincipal { get; private set; }
@@ -67,6 +68,7 @@ public sealed class CustomerAccount : Account
         ProductId = productId;
         ProductType = productType;
         InterestAccured = 0;
+        InterestCalculatedOn = null;
         InterestPostedOn = accountOpenDate;
         Principal = principal;
         OutstandingPrincipal = outstandingPrincipal;
@@ -206,6 +208,28 @@ public sealed class CustomerAccount : Account
             throw new ArgumentOutOfRangeException(nameof(amount));
 
         InterestAccured += amount;
+    }
+
+    public bool AccrueDailyInterest(
+        decimal amount,
+        DateTime calculatedOn)
+    {
+        if (amount < 0)
+            throw new ArgumentOutOfRangeException(nameof(amount));
+
+        if (calculatedOn.Date < AccountOpenDate.Date)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(calculatedOn),
+                "Interest cannot be calculated before the account opened.");
+        }
+
+        if (InterestCalculatedOn?.Date >= calculatedOn.Date)
+            return false;
+
+        InterestAccured += amount;
+        InterestCalculatedOn = calculatedOn;
+        return true;
     }
 
     public void MarkInterestPosted(DateTime postedOn)

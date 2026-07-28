@@ -1,4 +1,5 @@
 using BankingConsole.Models.Product;
+using Microsoft.EntityFrameworkCore;
 
 namespace BankingConsole.Repository;
 
@@ -13,6 +14,14 @@ public class ProductRepository : IProductRepository
     public void Add(Product product)
     {
         _context.Products.Add(product);
+    }
+
+    public async Task<IReadOnlyList<Product>> GetAllAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Products
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<Product?> GetByIdAsync(

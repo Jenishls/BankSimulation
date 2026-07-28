@@ -1,4 +1,5 @@
 using BankingConsole.Models.Account;
+using BankingConsole.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace BankingConsole.Repository;
@@ -44,6 +45,19 @@ public class AccountRepository : IAccountRepository
         .OfType<CustomerAccount>()
         .Where(account => account.CustomerId == customerId)
         .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<CustomerAccount>>
+        GetActiveCustomerAccountsByProductIdAsync(
+            Guid productId,
+            CancellationToken cancellationToken = default)
+    {
+        return await _context.Accounts
+            .OfType<CustomerAccount>()
+            .Where(account =>
+                account.ProductId == productId &&
+                account.State == AccountState.ACTIVE)
+            .ToListAsync(cancellationToken);
     }
 
 }

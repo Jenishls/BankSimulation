@@ -1,54 +1,69 @@
-using BankingConsole.DB;
+using BankingConsole.Common;
 using BankingConsole.Models.Account;
 using BankingConsole.Models.Enums;
 using BankingConsole.Models.Interest;
 using BankingConsole.Models.Product;
-using BankingConsole.Repository;
-using BankingConsole.Services.Interest.InterestDue;
 
 namespace BankingConsole.Services.Interest.InterestCalculation;
 
-public class InterestService
+public sealed class InterestCalculationService
 {
-    private readonly IAccountRepository _accountRepository;
-    private readonly IProductRepository _productRepository;
     private readonly IInterestCalculator _interestCalculator;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<InterestService> _logger;
+    private readonly ILogger<InterestCalculationService> _logger;
 
-    public InterestService(
-        IAccountRepository accountRepository,
-        IProductRepository productRepository,
+    public InterestCalculationService(
         IInterestCalculator interestCalculator,
-        IUnitOfWork unitOfWork,
-        ILogger<InterestService> logger)
+        ILogger<InterestCalculationService> logger)
     {
-        _accountRepository = accountRepository;
-        _productRepository = productRepository;
         _interestCalculator = interestCalculator;
-        _unitOfWork = unitOfWork;
-        _logger = logger; 
+        _logger = logger;
     }
-    
-    public async Task InterestCalculation(
+
+    public decimal CalculateDailyInterest(
         CustomerAccount account,
-        CancellationToken cancellationToken)
+        Product product,
+        DateTime calculationDate)
     {
-        var product = await _productRepository.GetByIdAsync(
-            account.ProductId,
-            cancellationToken)
-            ?? throw new InvalidOperationException(
-                $"Product {account.ProductId} was not found.");
+        ArgumentNullException.ThrowIfNull(account);
+        ArgumentNullException.ThrowIfNull(product);
 
-        decimal interestCalculated = _interestCalculator.Calculate(new InterestCalculatorData
+        if (account.ProductId != product.ProductId)
         {
-            Balance = account.GetBalance(),
-            Rate = product.InterestRate   
-        });
+            throw new ValidationException(
+                "The account does not belong to the supplied product.");
+        }
 
-        account.IncreaseInterestAccured(interestCalculated); // + account.InterestAccured;
+        if (account.InterestCalculatedOn?.Date >=
+            calculationDate.Date)
+        {
+            return 0;
+        }
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        var interestBalance = product.ProductType == ProductType.LOAN
+            ? account.OutstandingPrincipal.GetValueOrDefault()
+            : account.GetBalance();
+
+        var calculatedInterest = _interestCalculator.Calculate(
+            new InterestCalculatorData
+            {
+                Balance = interestBalance,
+                Rate = product.InterestRate
+            });
+
+        var accrued = account.AccrueDailyInterest(
+            calculatedInterest,
+            calculationDate);
+
+        if (!accrued)
+            return 0;
+
+        _logger.LogInformation(
+            "Calculated {InterestAmount} daily interest for " +
+            "account {AccountId} on {CalculationDate}",
+            calculatedInterest,
+            account.AccountId,
+            calculationDate.Date);
+
+        return calculatedInterest;
     }
 }
-

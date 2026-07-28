@@ -259,6 +259,9 @@ public class AppDbContext : DbContext
         product.Property(p => p.InterestRate)
             .HasPrecision(18, 6);
 
+        product.Property(p => p.TaxRate)
+            .HasPrecision(18, 6);
+
         product.Property(p => p.TransferPenaltyRate)
             .HasPrecision(18, 6);
 

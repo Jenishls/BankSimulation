@@ -1,4 +1,3 @@
-using Azure;
 using BankingConsole.Common;
 using BankingConsole.DB;
 using BankingConsole.Models;
@@ -16,7 +15,6 @@ public class TransactionService
     private readonly ILogger<TransactionService> _logger;
     public TransactionService(
         ITransactionRepository transactionRepository,
-        IAccountRepository accountRepository,
         ITransactionActionRepository transactionActionRepository,
         IUnitOfWork unitOfWork,
         ILogger<TransactionService> logger
@@ -28,8 +26,16 @@ public class TransactionService
         _logger = logger;
     }
 
-    public async Task<Transaction> CreateTransactionAsync(List<LedgerEntry> entries, EntryType entryType, string description, Guid idempotencyKey)
+    public async Task<Transaction> CreateTransactionAsync(
+        List<LedgerEntry> entries,
+        EntryType entryType,
+        string description,
+        Guid idempotencyKey,
+        CancellationToken cancellationToken = default,
+        string performedBy = "System")
     {
+        ArgumentNullException.ThrowIfNull(entries);
+
         _logger.LogInformation(
             "Transaction initiated. IdempotencyKey: {IdempotencyKey}, EntryCount: {EntryCount}, EntryType : {EntryType}, Description : {Description} ",
             idempotencyKey,
@@ -38,7 +44,10 @@ public class TransactionService
             description
         );
        
-        var existingTransaction = await _transactionRepository.GetByIdempotencyKeyAsync(idempotencyKey);
+        var existingTransaction = await _transactionRepository
+            .GetByIdempotencyKeyAsync(
+                idempotencyKey,
+                cancellationToken);
         
         if(existingTransaction is not null)
         {
@@ -61,16 +70,19 @@ public class TransactionService
             null,
             TransactionState.PENDING,
             description,
-            "User"
+            performedBy
         );
 
         _transactionRepository.Add(transaction);
         _transactionActionRepository.Add(transactionAction);
         
         try{
-            await _unitOfWork.SaveChangesAsync();
-        }catch(DbUpdateException ex){
-            throw new ConflictException($"Database error while creating transaction. IdempotencyKey: {idempotencyKey}, TransactionId : {transaction.TransactionId}. {ex}");
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }catch(DbUpdateException){
+            throw new ConflictException(
+                $"Database error while creating transaction. " +
+                $"IdempotencyKey: {idempotencyKey}, " +
+                $"TransactionId: {transaction.TransactionId}.");
         }
         _logger.LogInformation(
             "Transaction created successfully. IdempotencyKey: {IdempotencyKey}, TransactionId: {TransactionId}",
@@ -80,15 +92,20 @@ public class TransactionService
         return transaction;
     }
 
-    public async Task<Transaction> UpdateTransactionAsync(Guid transactionId, string description, Guid idempotencyKey)
+    public async Task<Transaction> PostTransactionAsync(
+        Guid transactionId,
+        string description,
+        CancellationToken cancellationToken = default,
+        string performedBy = "System")
     {
         _logger.LogInformation(
-            "Transaction Update Initiated. IdempotencyKey : {IdempotencyKey}, TransactionId: {TransactionId}",
-            idempotencyKey,
+            "Transaction posting initiated. TransactionId: {TransactionId}",
             transactionId
         );
 
-        var transaction = await _transactionRepository.GetByIdAsync(transactionId);
+        var transaction = await _transactionRepository.GetByIdAsync(
+            transactionId,
+            cancellationToken);
         if (transaction == null)
         {
             throw new NotFoundException($"Transaction {transactionId} not found");
@@ -101,14 +118,14 @@ public class TransactionService
             previousState,
             transaction.State,
             description,
-            "User"
+            performedBy
         );
 
         _transactionActionRepository.Add(transactionAction);
 
         try
         {
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
         catch(DbUpdateConcurrencyException)
         {
@@ -116,8 +133,7 @@ public class TransactionService
         }
         
         _logger.LogInformation(
-            "Transaction updated successfully. IdempotencyKey: {IdempotencyKey}, TransactionId: {TransactionId}",
-            idempotencyKey,
+            "Transaction posted successfully. TransactionId: {TransactionId}",
             transaction.TransactionId
             );
 

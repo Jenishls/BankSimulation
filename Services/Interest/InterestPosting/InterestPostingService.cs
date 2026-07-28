@@ -37,9 +37,10 @@ public sealed class InterestPostingService
         _logger = logger;
     }
 
-    public async Task<Transaction?> PostInterestIfDueAsync(
+    public async Task<InterestPostingResult?> PostInterestIfDueAsync(
         CustomerAccount account,
         DateTime postingDate,
+        decimal taxAmount = 0,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(account);
@@ -56,6 +57,101 @@ public sealed class InterestPostingService
             return null;
         }
 
+        if (!IsPostingDue(account, product, postingDate))
+            return null;
+
+        var grossInterest = account.InterestAccured;
+        ValidateTax(product.InterestFlow, grossInterest, taxAmount);
+
+        var postingAccount = await ResolvePostingAccountAsync(
+            account,
+            product,
+            cancellationToken);
+        var interestOfficeAccount =
+            await ResolveOfficeAccountAsync(
+                product.InterestOfficeAccountId,
+                "Interest",
+                cancellationToken);
+
+        Transaction? taxTransaction = null;
+        if (taxAmount > 0)
+        {
+            var taxOfficeAccount = await ResolveOfficeAccountAsync(
+                product.TaxOfficeAccountId,
+                "Tax",
+                cancellationToken);
+            var taxDescription =
+                $"Interest tax debit for account " +
+                $"{postingAccount.AccountNumber} on " +
+                $"{postingDate:yyyy-MM-dd}. Tax: {taxAmount}.";
+
+            taxTransaction = await CreateAndPostAsync(
+                [
+                    LedgerEntry.Create(
+                        postingAccount,
+                        Flow.DEBIT,
+                        taxAmount,
+                        product.Currency),
+                    LedgerEntry.Create(
+                        taxOfficeAccount,
+                        Flow.CREDIT,
+                        taxAmount,
+                        product.Currency)
+                ],
+                EntryType.TAX,
+                taxDescription,
+                CreateIdempotencyKey(
+                    account.AccountId,
+                    postingDate,
+                    "interest-tax"),
+                cancellationToken);
+        }
+
+        var interestDescription =
+            $"Gross interest posting for account " +
+            $"{postingAccount.AccountNumber} on " +
+            $"{postingDate:yyyy-MM-dd}. Interest: {grossInterest}.";
+        var interestTransaction = await CreateAndPostAsync(
+            [
+                LedgerEntry.Create(
+                    postingAccount,
+                    product.InterestFlow,
+                    grossInterest,
+                    product.Currency),
+                LedgerEntry.Create(
+                    interestOfficeAccount,
+                    Opposite(product.InterestFlow),
+                    grossInterest,
+                    product.Currency)
+            ],
+            EntryType.INTEREST,
+            interestDescription,
+            CreateIdempotencyKey(
+                account.AccountId,
+                postingDate,
+                "interest"),
+            cancellationToken,
+            beforePost: () => account.MarkInterestPosted(postingDate));
+
+        _logger.LogInformation(
+            "Posted {GrossInterest} gross interest and {TaxAmount} " +
+            "tax for source account {SourceAccountId} to posting " +
+            "account {PostingAccountId}",
+            grossInterest,
+            taxAmount,
+            account.AccountId,
+            postingAccount.AccountId);
+
+        return new InterestPostingResult(
+            interestTransaction,
+            taxTransaction);
+    }
+
+    private bool IsPostingDue(
+        CustomerAccount account,
+        Product product,
+        DateTime postingDate)
+    {
         var dueData = new IsDueResolverData
         {
             Frequency = product.InterestPostingFrequency,
@@ -65,79 +161,50 @@ public sealed class InterestPostingService
             LastInterestPostedOn = account.InterestPostedOn
         };
 
-        var isDue = _dueResolver
+        return _dueResolver
             .Resolve(product.InterestPostPolicies)
             .Any(policy => policy.IsDue(dueData));
+    }
 
-        if (!isDue)
-            return null;
-
-        var postingAccount = await ResolvePostingAccountAsync(
-            account,
-            product,
-            cancellationToken);
-
-        var interestOfficeAccount =  await ResolveInterestOfficeAccountAsync(
-                product,
+    private async Task<Transaction> CreateAndPostAsync(
+        List<LedgerEntry> entries,
+        EntryType entryType,
+        string description,
+        Guid idempotencyKey,
+        CancellationToken cancellationToken,
+        Action? beforePost = null)
+    {
+        var transaction =
+            await _transactionService.CreateTransactionAsync(
+                entries,
+                entryType,
+                description,
+                idempotencyKey,
                 cancellationToken);
 
-        var amount = account.InterestAccured;
-
-        var idempotencyKey = CreateIdempotencyKey(account.AccountId,postingDate);
-
-        var description =
-            $"Transaction creation to post interest for account {account.AccountNumber} on {postingDate:yyyy-MM-dd}.";
-        var entries = new List<LedgerEntry>
+        if (transaction.State == TransactionState.POSTED)
         {
-            LedgerEntry.Create(
-                postingAccount,
-                product.InterestFlow,
-                amount,
-                product.Currency),
+            beforePost?.Invoke();
 
-            LedgerEntry.Create(
-                interestOfficeAccount,
-                Opposite(product.InterestFlow),
-                amount,
-                product.Currency)
-        };
+            if (beforePost is not null)
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var transaction = await _transactionService.CreateTransactionAsync(
-                entries,
-                EntryType.INTEREST,
-                description,
-                idempotencyKey);
+            return transaction;
+        }
 
         if (transaction.State != TransactionState.PENDING)
         {
             throw new ConflictException(
-                $"Interest transaction {transaction.TransactionId} " +
-                $"cannot be posted from state {transaction.State}.");
+                $"Transaction {transaction.TransactionId} cannot be " +
+                $"posted from state {transaction.State}.");
         }
 
-        if (transaction.State == TransactionState.POSTED)
-        {
-            account.MarkInterestPosted(postingDate);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return transaction;
-        }
+        beforePost?.Invoke();
 
-        account.MarkInterestPosted(postingDate);
-
-        var postedTransaction = await _transactionService.UpdateTransactionAsync(
-                transaction.TransactionId,
-                description,
-                idempotencyKey
-                );
-
-        _logger.LogInformation(
-            "Posted {Amount} interest from account {SourceAccountId} " +
-            "to customer posting account {PostingAccountId}",
-            amount,
-            account.AccountId,
-            postingAccount.AccountId);
-
-        return postedTransaction;
+        return await _transactionService.PostTransactionAsync(
+            transaction.TransactionId,
+            description,
+            cancellationToken);
     }
 
     private async Task<CustomerAccount> ResolvePostingAccountAsync(
@@ -190,18 +257,36 @@ public sealed class InterestPostingService
         return customerAccount;
     }
 
-    private async Task<OfficeAccount> ResolveInterestOfficeAccountAsync(
-        Product product,
+    private async Task<OfficeAccount> ResolveOfficeAccountAsync(
+        Guid accountId,
+        string purpose,
         CancellationToken cancellationToken)
     {
         var account = await _accountRepository.GetAccountByIdAsync(
-            product.InterestOfficeAccountId,
+            accountId,
             cancellationToken);
 
         return account as OfficeAccount
             ?? throw new NotFoundException(
-                $"Interest office account " +
-                $"{product.InterestOfficeAccountId} was not found.");
+                $"{purpose} office account {accountId} was not found.");
+    }
+
+    private static void ValidateTax(
+        Flow interestFlow,
+        decimal grossInterest,
+        decimal taxAmount)
+    {
+        if (taxAmount < 0 || taxAmount > grossInterest)
+        {
+            throw new ValidationException(
+                "Tax must be between zero and the accrued interest.");
+        }
+
+        if (interestFlow == Flow.DEBIT && taxAmount > 0)
+        {
+            throw new ValidationException(
+                "Withholding tax is only supported for credit interest.");
+        }
     }
 
     private static Flow Opposite(Flow flow)
@@ -219,10 +304,11 @@ public sealed class InterestPostingService
 
     private static Guid CreateIdempotencyKey(
         Guid accountId,
-        DateTime postingDate)
+        DateTime postingDate,
+        string purpose)
     {
         var input = Encoding.UTF8.GetBytes(
-            $"{accountId:N}:interest:{postingDate:yyyyMMdd}");
+            $"{accountId:N}:{purpose}:{postingDate:yyyyMMdd}");
         var hash = SHA256.HashData(input);
 
         return new Guid(hash.AsSpan(0, 16));

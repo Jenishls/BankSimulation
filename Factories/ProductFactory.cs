@@ -20,6 +20,7 @@ public sealed class ProductFactory : IProductFactory
             interestOfficeAccountId: data.InterestOfficeAccountId,
             taxOfficeAccountId: data.TaxOfficeAccountId,
             productType: data.ProductType,
+            taxRate: data.TaxRate,
             postInterestToLinkedAccount:
                 data.PostInterestToLinkedAccount,
             minimumAmount: data.MinimumAmount,

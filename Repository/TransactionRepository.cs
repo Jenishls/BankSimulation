@@ -16,27 +16,28 @@ public class TransactionRepository : ITransactionRepository
         _context.Transactions.Add(transaction);
     }
 
-    public async Task<Transaction?> GetByIdAsync(Guid transactionId)
+    public async Task<Transaction?> GetByIdAsync(
+        Guid transactionId,
+        CancellationToken cancellationToken = default)
     {
         return await _context.Transactions
-        .Include(t => t.Entries)
-        .ThenInclude(entry => entry.Account)
-        .FirstOrDefaultAsync(t => t.TransactionId == transactionId);
+            .Include(t => t.Entries)
+            .ThenInclude(entry => entry.Account)
+            .FirstOrDefaultAsync(
+                t => t.TransactionId == transactionId,
+                cancellationToken);
     }
 
-    public async Task<Transaction?> GetByIdempotencyKeyAsync(Guid idempotencyKey)
+    public async Task<Transaction?> GetByIdempotencyKeyAsync(
+        Guid idempotencyKey,
+        CancellationToken cancellationToken = default)
     {
         return await _context.Transactions
-        .AsNoTracking()
-        .SingleOrDefaultAsync(
-            transaction =>
-            transaction.IdempotencyKey == idempotencyKey
-        );
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                transaction =>
+                    transaction.IdempotencyKey == idempotencyKey,
+                cancellationToken);
         
-    }
-
-    public void Update(Transaction transaction)
-    {
-        _context.Transactions.Update(transaction);
     }
 }

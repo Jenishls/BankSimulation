@@ -13,6 +13,10 @@ namespace BankingConsole.Repository
         Task<IEnumerable<Account>> GetAccountsByCustomerIdAsync(
             Guid customerId,
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<CustomerAccount>>
+            GetActiveCustomerAccountsByProductIdAsync(
+                Guid productId,
+                CancellationToken cancellationToken = default);
         void AddAccount(Account account);
     }
 }
