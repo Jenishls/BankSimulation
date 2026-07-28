@@ -2,20 +2,15 @@ using BankingConsole.Models.Enums;
 
 namespace BankingConsole.Models.Product;
 
-public sealed class TermProduct : Product
+public sealed class SavingProduct : Product
 {
-    public override ProductType ProductType => ProductType.TERM;
+    public override ProductType ProductType => ProductType.SAVING;
 
-    public int TenureInDays { get; private set; }
-    public int TransferCount { get; private set; }
-    public Frequency TransferFrequency { get; private set; }
-    public bool AllowPrematureWithdrawal { get; private set; }
-
-    private TermProduct()
+    private SavingProduct()
     {
     }
 
-    private TermProduct(
+    private SavingProduct(
         string productCode,
         string productName,
         CustomerType allowedCustomerType,
@@ -23,10 +18,6 @@ public sealed class TermProduct : Product
         decimal interestRate,
         IEnumerable<InterestPostPolicy> interestPostPolicies,
         Frequency? interestPostingFrequency,
-        int tenureInDays,
-        int transferCount,
-        Frequency transferFrequency,
-        bool allowPrematureWithdrawal,
         decimal minimumAmount,
         decimal? taxPercentage,
         int withdrawalLimitCount,
@@ -49,24 +40,16 @@ public sealed class TermProduct : Product
             withdrawalLimitAmount,
             withdrawalLimitAmountFrequency)
     {
-        TenureInDays = tenureInDays;
-        TransferCount = transferCount;
-        TransferFrequency = transferFrequency;
-        AllowPrematureWithdrawal = allowPrematureWithdrawal;
     }
 
-    public static TermProduct Create(
+    public static SavingProduct Create(
         string productCode,
         string productName,
         CustomerType allowedCustomerType,
         Currency currency,
         decimal interestRate,
         IEnumerable<InterestPostPolicy> interestPostPolicies,
-        Frequency? interestPostingFrequency,
-        int tenureInDays,
-        int transferCount,
-        Frequency transferFrequency,
-        bool allowPrematureWithdrawal = false,
+        Frequency? interestPostingFrequency = null,
         decimal minimumAmount = 0,
         decimal? taxPercentage = null,
         int withdrawalLimitCount = 0,
@@ -74,21 +57,7 @@ public sealed class TermProduct : Product
         decimal withdrawalLimitAmount = 0,
         Frequency? withdrawalLimitAmountFrequency = null)
     {
-        if (tenureInDays <= 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(tenureInDays),
-                "Term-product tenure must be greater than zero.");
-        }
-
-        if (transferCount <= 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(transferCount),
-                "Transfer count must be greater than zero.");
-        }
-
-        return new TermProduct(
+        return new SavingProduct(
             productCode,
             productName,
             allowedCustomerType,
@@ -96,10 +65,6 @@ public sealed class TermProduct : Product
             interestRate,
             interestPostPolicies,
             interestPostingFrequency,
-            tenureInDays,
-            transferCount,
-            transferFrequency,
-            allowPrematureWithdrawal,
             minimumAmount,
             taxPercentage,
             withdrawalLimitCount,

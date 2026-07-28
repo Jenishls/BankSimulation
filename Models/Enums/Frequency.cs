@@ -2,10 +2,10 @@ namespace BankingConsole.Models.Enums;
 
 public enum Frequency
 {
-    Daily,
-    ForNightly,
-    Monthly,
-    Quaterly,
-    HalfYearly,
-    Yearly
+    DAILY,
+    WEEKLY,
+    MONTHLY,
+    QUATERLY,
+    HALF_YEARLY,
+    YEARLY
 }

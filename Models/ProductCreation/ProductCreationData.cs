@@ -2,25 +2,20 @@ using BankingConsole.Models.Enums;
 
 namespace BankingConsole.Models.ProductCreation;
 
-public class ProductCreationData
+public sealed class ProductCreationData
 {
-    public required string ProductCode {get; init;}
-    public required string ProductName {get; init;}
-    public Currency Currency {get; init;}
-    public CustomerType AllowedCustomerType {get; init;}
-    public decimal MinimunAmount {get; init;}
-    public ProductType ProductType {get; init;}
+    public required string ProductCode { get; init; }
+    public required string ProductName { get; init; }
+    public Currency Currency { get; init; }
+    public CustomerType AllowedCustomerType { get; init; }
+    public decimal MinimumAmount { get; init; }
+    public ProductType ProductType { get; init; }
 
-
-    public bool DebitInterestCalculation { get;  init; }
-    public bool CreditInterestCalculation { get;  init; }
-    public decimal? DebitInterestRate { get;  init; }
-    public decimal? CreditInterestRate { get;  init; }
-    public Frequency? DebitCalculationFrequency {get;  init;}
-    public Frequency? CreditCalculationFrequency {get;  init;}
-    public Frequency? DebitPostingFrequency {get;  init;}
-    public Frequency? CreditPostingFrequency {get;  init;}
-    public decimal? TaxPercentage { get;  init; }
+    public Flow? OfficeInterestFlow { get; init; }
+    public decimal InterestRate { get; init; }
+    public List<InterestPostPolicy> InterestPostPolicies { get; init; } = [];
+    public Frequency? InterestPostingFrequency { get; init; }
+    public decimal? TaxPercentage { get; init; }
 
     public int WithdrawalLimitCount { get;  init; }
     public Frequency? WithdrawalLimitFrequency { get;  init; }
@@ -31,6 +26,7 @@ public class ProductCreationData
 
     public int? TransferCount { get; init; }
     public Frequency? TransferFrequency { get; init; }
+    public bool AllowPrematureWithdrawal { get; init; }
 
     public int? RepaymentCount { get; init; }
     public Frequency? RepaymentFrequency { get; init; }

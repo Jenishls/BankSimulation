@@ -3,6 +3,7 @@ using BankingConsole.Factories;
 using BankingConsole.Middleware;
 using BankingConsole.Repository;
 using BankingConsole.Services;
+using BankingConsole.Services.Interest.InterestDue;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -35,6 +36,11 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddScoped<AccountFactory>();
 builder.Services.AddScoped<ICustomerFactory, CustomerFactory>();
+builder.Services.AddScoped<IProductFactory, ProductFactory>();
+builder.Services.AddSingleton<IInterestPostPolicy, LastDayOfFrequencyPolicy>();
+builder.Services.AddSingleton<IInterestPostPolicy, MaturityPolicy>();
+builder.Services.AddSingleton<IInterestPostPolicy, PostDatePolicy>();
+builder.Services.AddSingleton<IInterestPostResolver, InterestPostResolver>();
 builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<CustomerService>();

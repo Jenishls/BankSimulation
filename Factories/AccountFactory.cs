@@ -28,6 +28,9 @@ public sealed class AccountFactory : IAccountFactory
             ProductType.SAVING =>
                 CreateSaving(data, accountNumber),
 
+            ProductType.OFFICE =>
+                CreateOffice(data, accountNumber),
+
             _ => throw new ArgumentOutOfRangeException(
                 nameof(data.ProductType),
                 "Unsupported product type.")
@@ -45,7 +48,7 @@ public sealed class AccountFactory : IAccountFactory
 
         return TermAccount.Create(
             accountNumber,
-            data.CustomerId,
+            RequiredCustomerId(data),
             data.ProductId,
             data.BranchCode,
             details.Principal,
@@ -64,7 +67,7 @@ public sealed class AccountFactory : IAccountFactory
 
         return SavingAccount.Create(
             accountNumber,
-            data.CustomerId,
+            RequiredCustomerId(data),
             data.ProductId,
             data.BranchCode,
             details.OpeningBalance
@@ -82,7 +85,7 @@ public sealed class AccountFactory : IAccountFactory
 
         return LoanAccount.Create(
             accountNumber,
-            data.CustomerId,
+            RequiredCustomerId(data),
             data.ProductId,
             data.BranchCode,
             details.Principal,
@@ -90,16 +93,59 @@ public sealed class AccountFactory : IAccountFactory
             details.RepaymentInstallments);
     }
 
-    private static void ValidateCommonData( AccountCreationData data){
-        if (data.CustomerId == Guid.Empty)
+    private static OfficeAccount CreateOffice(
+        AccountCreationData data,
+        string accountNumber)
+    {
+        var details = data.Office
+            ?? throw new ArgumentException(
+                "Office-account details are required.",
+                nameof(data));
+
+        return OfficeAccount.Create(
+            accountNumber,
+            data.ProductId,
+            data.BranchCode,
+            details.OpeningBalance);
+    }
+
+    private static Guid RequiredCustomerId(AccountCreationData data)
+    {
+        return data.CustomerId
+            ?? throw new ArgumentException(
+                "Customer id is required for customer-owned accounts.",
+                nameof(data.CustomerId));
+    }
+
+    private static void ValidateCommonData(AccountCreationData data)
+    {
+        if (data.ProductType is ProductType.OFFICE)
+        {
+            if (data.CustomerId.HasValue)
+            {
+                throw new ArgumentException(
+                    "Office accounts cannot be assigned to a customer.",
+                    nameof(data.CustomerId));
+            }
+        }
+        else if (!data.CustomerId.HasValue ||
+                 data.CustomerId.Value == Guid.Empty)
+        {
             throw new ArgumentException(
                 "Customer id is required.",
                 nameof(data.CustomerId));
+        }
 
         if (data.ProductId == Guid.Empty)
             throw new ArgumentException(
                 "Product id is required.",
                 nameof(data.ProductId));
 
+        if (string.IsNullOrWhiteSpace(data.BranchCode))
+        {
+            throw new ArgumentException(
+                "Branch code is required.",
+                nameof(data.BranchCode));
+        }
     }
 }

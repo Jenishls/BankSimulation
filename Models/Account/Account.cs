@@ -9,13 +9,13 @@ public abstract class Account
     public Guid AccountId { get; private set; }
     public string AccountNumber { get; private set; } = null!;
     public string BranchCode {get; private set; } = null!;
-    public Guid CustomerId { get; private set; }
+    public Guid? CustomerId { get; private set; }
     public Guid ProductId { get; private set; }
     public decimal Balance { get; private  set; }
     public AccountState State { get; private set; }
     public DateTime AccountOpenDate { get; private set; } = DateTime.UtcNow;
-    public decimal? InterestAccured { get; private set; }
-    public DateTime? InterestPostedOn { get; private set; }
+    public decimal InterestAccured { get; private set; } = 0m;
+    public DateTime InterestPostedOn { get; private set; } = DateTime.UtcNow.AddDays(-1);
 
     [Timestamp]
     public byte[] RowVersion { get; private set; } = [];
@@ -25,7 +25,7 @@ public abstract class Account
 
     protected Account(
         string accountNumber,
-        Guid customerId,
+        Guid? customerId,
         Guid productId,
         string branchCode,
         decimal balance,
@@ -41,7 +41,7 @@ public abstract class Account
 
         if (customerId == Guid.Empty)
             throw new ArgumentException(
-                "Customer id is required.",
+                "Customer id cannot be empty when supplied.",
                 nameof(customerId));
                 
         if (branchCode == null)
@@ -104,6 +104,11 @@ public abstract class Account
     public decimal GetBalance()
     {
         return Balance;
+    }
+
+    public void IncreaseInterestAccured(decimal amount)
+    {
+        InterestAccured = InterestAccured + amount;
     }
 
 }

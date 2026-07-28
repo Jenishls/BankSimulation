@@ -2,6 +2,7 @@ using BankingConsole.Models;
 using BankingConsole.Models.Account;
 using BankingConsole.Models.Customer;
 using BankingConsole.Models.Enums;
+using BankingConsole.Models.Product;
 using Microsoft.EntityFrameworkCore;
 
 public class AppDbContext : DbContext
@@ -20,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
     public DbSet<TransactionAction> TransactionActions => Set<TransactionAction>();
+    public DbSet<Product> Products => Set<Product>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,6 +30,7 @@ public class AppDbContext : DbContext
         ConfigureCustomer(modelBuilder);
         ConfigureCustomerRole(modelBuilder);
         ConfigureCustomerAction(modelBuilder);
+        ConfigureProduct(modelBuilder);
         ConfigureAccount(modelBuilder);
         ConfigureTransaction(modelBuilder);
         ConfigureLedgerEntry(modelBuilder);
@@ -48,6 +51,7 @@ public class AppDbContext : DbContext
             .HasMaxLength(50);
 
         customer.HasDiscriminator(c => c.CustomerType)
+            .HasValue<Customer>(CustomerType.ALL)
             .HasValue<IndividualCustomer>(CustomerType.INDIVIDUAL)
             .HasValue<InstitutionalCustomer>(CustomerType.INSTITUTIONAL);
 
@@ -174,16 +178,93 @@ public class AppDbContext : DbContext
         account.Property(a => a.Balance)
             .HasPrecision(18, 2);
 
+        account.Property(a => a.InterestAccured)
+            .HasPrecision(18, 2);
+
         account.Property(a => a.RowVersion)
             .IsRowVersion();
 
         account.HasIndex(a => a.AccountNumber)
             .IsUnique();
 
+        account.HasDiscriminator<string>("AccountType")
+            .HasValue<SavingAccount>("SAVING")
+            .HasValue<TermAccount>("TERM")
+            .HasValue<LoanAccount>("LOAN")
+            .HasValue<OfficeAccount>("OFFICE");
+
         account.HasOne<Customer>()
             .WithMany()
             .HasForeignKey(a => a.CustomerId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
+
+        account.HasOne<Product>()
+            .WithMany()
+            .HasForeignKey(a => a.ProductId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<TermAccount>()
+            .Property(a => a.Principal)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<LoanAccount>()
+            .Property(a => a.OriginalPrincipal)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<LoanAccount>()
+            .Property(a => a.OutstandingPrincipal)
+            .HasPrecision(18, 2);
+    }
+
+    private static void ConfigureProduct(ModelBuilder modelBuilder)
+    {
+        var product = modelBuilder.Entity<Product>();
+
+        product.HasKey(p => p.ProductId);
+
+        product.Property(p => p.ProductCode)
+            .HasMaxLength(50)
+            .IsRequired();
+
+        product.HasIndex(p => p.ProductCode)
+            .IsUnique();
+
+        product.Property(p => p.ProductName)
+            .HasMaxLength(200)
+            .IsRequired();
+
+        product.Property(p => p.MinimumAmount)
+            .HasPrecision(18, 2);
+
+        product.Property(p => p.InterestRate)
+            .HasPrecision(18, 6);
+
+        product.Property(p => p.TaxPercentage)
+            .HasPrecision(5, 2);
+
+        product.Property(p => p.WithdrawalLimitAmount)
+            .HasPrecision(18, 2);
+
+        product.PrimitiveCollection(p => p.InterestPostPolicies)
+            .HasMaxLength(100)
+            .IsRequired();
+
+        product.Ignore(p => p.ProductType);
+
+        product.HasDiscriminator<ProductType>("ProductKind")
+            .HasValue<SavingProduct>(ProductType.SAVING)
+            .HasValue<TermProduct>(ProductType.TERM)
+            .HasValue<LoanProduct>(ProductType.LOAN)
+            .HasValue<OfficeProduct>(ProductType.OFFICE);
+
+        product.Property<ProductType>("ProductKind")
+            .HasColumnName("ProductType");
+
+        modelBuilder.Entity<LoanProduct>()
+            .Property(p => p.PenaltyInterestRate)
+            .HasPrecision(18, 6);
     }
 
     private static void ConfigureTransaction(ModelBuilder modelBuilder)

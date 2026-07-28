@@ -5,5 +5,5 @@ namespace BankingConsole.Factories;
 
 public interface IProductFactory
 {
-    public Product Create(ProductCreationData product);
+    Product Create(ProductCreationData product);
 }

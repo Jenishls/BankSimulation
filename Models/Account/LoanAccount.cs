@@ -8,6 +8,7 @@ public sealed class LoanAccount : Account
     public decimal OutstandingPrincipal { get; private set; }
     public Guid DisbursementAccountId { get; private set; }
     public int RepaymentInstallments{get; private set;}
+    
     private LoanAccount()
     {
     }
