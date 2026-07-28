@@ -4,47 +4,54 @@ namespace BankingConsole.Models.Account;
 
 public sealed class OfficeAccount : Account
 {
+    private OfficeAccountType officeAccountType{get; set;}
     private OfficeAccount()
     {
     }
 
     private OfficeAccount(
         string accountNumber,
-        Guid productId,
+        string name,
         string branchCode,
-        decimal openingBalance,
-        DateTime accountOpenDate)
+        AccountState state,
+        DateTime accountOpenDate,
+        OfficeAccountType officeAccountType,
+        decimal balance
+        )
         : base(
             accountNumber,
-            customerId: null,
-            productId,
+            name,
             branchCode,
-            openingBalance,
-            AccountState.ACTIVE,
-            accountOpenDate,
-            interestAccrued: null,
-            interestPostedOn: null)
-    {
-    }
+            balance,
+            state,
+            accountOpenDate
+            )
+    {}
 
     public static OfficeAccount Create(
-        string accountNumber,
-        Guid productId,
-        string branchCode,
-        decimal openingBalance = 0)
-    {
-        if (openingBalance < 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(openingBalance),
-                "An office account cannot be opened with a negative balance.");
-        }
 
+        string name,
+        string branchCode,
+        AccountState state,
+        OfficeAccountType officeAcountType
+        )
+    {
+        var account = new OfficeAccount();
+            
         return new OfficeAccount(
-            accountNumber,
-            productId,
+            account.GenerateAccountNumber(),
+            name,
             branchCode,
-            openingBalance,
-            DateTime.UtcNow);
+            state,
+            DateTime.UtcNow,
+            officeAcountType,
+            0
+            );
+    }
+
+    protected override string GenerateAccountNumber()
+    {
+        string acc = "O" + new Random().ToString();
+        return acc;
     }
 }
