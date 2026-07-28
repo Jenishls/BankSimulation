@@ -5,5 +5,6 @@ public enum AccountType
     SAVINGS,
     CURRENT,
     OFFICE,
+    CUSTOMER,
     LOAN
 }

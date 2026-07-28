@@ -8,6 +8,9 @@ public sealed class CustomerAccount : Account
     public decimal InterestAccured { get; private set; } = 0m;
     public DateTime InterestPostedOn { get; private set; }
 
+    public override AccountType AccountType => AccountType.CUSTOMER;
+
+
     private CustomerAccount(){}
 
     private CustomerAccount(

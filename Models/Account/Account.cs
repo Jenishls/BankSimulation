@@ -13,6 +13,8 @@ public abstract class Account
     public decimal Balance { get; private  set; } = 0m;
     public AccountState State { get; private set; }
     public DateTime AccountOpenDate { get; private set; } = DateTime.UtcNow;
+    public abstract AccountType AccountType{get;}
+
     [Timestamp]
     public byte[] RowVersion { get; private set; } = [];
     protected Account(){}

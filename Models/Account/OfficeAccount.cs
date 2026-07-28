@@ -4,7 +4,9 @@ namespace BankingConsole.Models.Account;
 
 public sealed class OfficeAccount : Account
 {
-    private OfficeAccountType officeAccountType{get; set;}
+    private OfficeAccountType OfficeAccountType{get; set;}
+    public override AccountType AccountType => AccountType.OFFICE;
+
     private OfficeAccount()
     {
     }
