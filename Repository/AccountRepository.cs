@@ -44,7 +44,18 @@ public class AccountRepository : IAccountRepository
         return await _context.Accounts
         .OfType<CustomerAccount>()
         .Where(account => account.CustomerId == customerId)
-        .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<CustomerAccount>>
+        GetAccountsByProductIdAsync(
+            Guid productId,
+            CancellationToken cancellationToken = default)
+    {
+        return await _context.Accounts
+            .OfType<CustomerAccount>()
+            .Where(account => account.ProductId == productId)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<CustomerAccount>>

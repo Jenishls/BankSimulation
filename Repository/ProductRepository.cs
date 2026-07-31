@@ -16,6 +16,16 @@ public class ProductRepository : IProductRepository
         _context.Products.Add(product);
     }
 
+    public void Update(Product product)
+    {
+        _context.Products.Update(product);
+    }
+
+    public void Delete(Product product)
+    {
+        _context.Products.Remove(product);
+    }
+
     public async Task<IReadOnlyList<Product>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {

@@ -277,4 +277,33 @@ public sealed class Product
             transferPenaltyRate,
             isMaturityProduct ? allowPremature ?? false : null);
     }
+
+    public void ApplyUpdate(Product updatedProduct)
+    {
+        ArgumentNullException.ThrowIfNull(updatedProduct);
+
+        ProductCode = updatedProduct.ProductCode;
+        ProductName = updatedProduct.ProductName;
+        BranchCode = updatedProduct.BranchCode;
+        Currency = updatedProduct.Currency;
+        AllowedCustomerType = updatedProduct.AllowedCustomerType;
+        MinimumAmount = updatedProduct.MinimumAmount;
+        ProductType = updatedProduct.ProductType;
+        InterestRate = updatedProduct.InterestRate;
+        InterestFlow = updatedProduct.InterestFlow;
+        InterestOfficeAccountId = updatedProduct.InterestOfficeAccountId;
+        TaxOfficeAccountId = updatedProduct.TaxOfficeAccountId;
+        TaxRate = updatedProduct.TaxRate;
+        PostInterestToLinkedAccount =
+            updatedProduct.PostInterestToLinkedAccount;
+        InterestPostPolicies = updatedProduct.InterestPostPolicies.ToList();
+        PostDate = updatedProduct.PostDate;
+        InterestPostingFrequency = updatedProduct.InterestPostingFrequency;
+        IsMaturityProduct = updatedProduct.IsMaturityProduct;
+        TenureInDays = updatedProduct.TenureInDays;
+        TransferCount = updatedProduct.TransferCount;
+        TransferFlow = updatedProduct.TransferFlow;
+        TransferPenaltyRate = updatedProduct.TransferPenaltyRate;
+        AllowPremature = updatedProduct.AllowPremature;
+    }
 }

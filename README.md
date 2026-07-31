@@ -5,10 +5,10 @@ Entity Framework Core, and SQL Server. It models customers, configurable banking
 products, customer and office accounts, double-entry transactions, and daily
 interest calculation, tax, and posting.
 
-The application exposes a health endpoint and customer CRUD endpoints. Product,
-account, transaction, and interest operations are implemented in the service
-layer and covered by automated tests, but they are not yet exposed through HTTP
-endpoints.
+The application exposes a health endpoint plus customer and product CRUD
+endpoints. Account, transaction, and interest operations are implemented in the
+service layer and covered by automated tests, but they are not yet exposed
+through HTTP endpoints.
 
 ## Main features
 
@@ -213,7 +213,8 @@ The response is:
 }
 ```
 
-Customer operations are available under `/api/customers`.
+Customer operations are available under `/api/customers`, and product
+operations are available under `/api/products`.
 
 ## Database migrations
 
@@ -261,6 +262,19 @@ The customer controller exposes:
 omitted, the API generates one and returns it in the response header. `PUT` also
 accepts an optional `X-Performed-By` header for the customer audit record.
 
-Product, account, transaction, and interest endpoints still need to be exposed
-to make this a complete HTTP banking API. The interest engine is particularly
-suited to a scheduled daily background job.
+## Product API
+
+The product controller exposes:
+
+- `GET /api/products`
+- `GET /api/products/{productId}`
+- `POST /api/products`
+- `PUT /api/products/{productId}`
+- `DELETE /api/products/{productId}`
+
+`PUT` uses `ProductCreationData` as a complete replacement payload. A product
+cannot change type or be deleted while customer accounts reference it.
+
+Account, transaction, and interest endpoints still need to be exposed to make
+this a complete HTTP banking API. The interest engine is particularly suited to
+a scheduled daily background job.

@@ -19,6 +19,8 @@
 
   <ItemGroup>
     <Compile Remove="BankingConsole.Tests\**\*.cs" />
+    <Content Remove="BankingConsole.Tests\**\*" />
+    <None Remove="BankingConsole.Tests\**\*" />
   </ItemGroup>
 
 </Project>
