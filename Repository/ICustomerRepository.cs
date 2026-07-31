@@ -3,9 +3,12 @@ namespace BankingConsole.Repository;
 
 public interface ICustomerRepository
 {
-    public void AddCustomer(Customer customer);
-    public void UpdateCustomer(Customer customer);
-    public Task<Customer?> GetByIdAsync(Guid customerId);
-    public Task<IReadOnlyList<Customer>> GetAllAsync();
-
+    void AddCustomer(Customer customer);
+    void UpdateCustomer(Customer customer);
+    void DeleteCustomer(Customer customer);
+    Task<Customer?> GetByIdAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Customer>> GetAllAsync(
+        CancellationToken cancellationToken = default);
 }

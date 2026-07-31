@@ -19,20 +19,35 @@ public class CustomerRepository : ICustomerRepository
         _context.Customers.Update(customer);
     }
 
-    public async Task<IReadOnlyList<Customer>> GetAllAsync()
+    public void DeleteCustomer(Customer customer)
     {
-        return await _context.Customers.ToListAsync();
+        _context.Customers.Remove(customer);
     }
 
-    public async Task<Customer?> GetByIdAsync(Guid customerId)
+    public async Task<IReadOnlyList<Customer>> GetAllAsync(
+        CancellationToken cancellationToken = default)
     {
-        return await _context.Customers
+        return await CustomerQuery()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Customer?> GetByIdAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default)
+    {
+        return await CustomerQuery()
+            .SingleOrDefaultAsync(
+                customer => customer.CustomerId == customerId,
+                cancellationToken);
+    }
+
+    private IQueryable<Customer> CustomerQuery()
+    {
+        return _context.Customers
             .Include(c => c.Address)
             .Include(c => c.Contact)
             .Include(c => c.Identity)
             .Include(c => ((IndividualCustomer)c).Nominee)
-            .Include(c => ((InstitutionalCustomer)c).Roles)
-            .SingleOrDefaultAsync(c => c.CustomerId == customerId);
+            .Include(c => ((InstitutionalCustomer)c).Roles);
     }
-
 }

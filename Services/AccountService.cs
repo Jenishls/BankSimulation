@@ -77,7 +77,9 @@ public class AccountService
             ?? throw new ValidationException(
                 "Product id is required for a customer account.");
 
-        var customer = await _customerRepository.GetByIdAsync(customerId)
+        var customer = await _customerRepository.GetByIdAsync(
+            customerId,
+            cancellationToken)
             ?? throw new NotFoundException(
                 $"Customer {customerId} was not found.");
 

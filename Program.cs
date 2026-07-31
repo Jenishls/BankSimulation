@@ -21,6 +21,7 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 
 builder.Services.AddExceptionHandler<AppExceptionHandler>();
 builder.Services.AddProblemDetails();
+builder.Services.AddControllers();
 
 var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection")
@@ -61,6 +62,7 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
+app.MapControllers();
 
 app.MapGet("/health", () =>
 {

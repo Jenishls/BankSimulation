@@ -5,9 +5,10 @@ Entity Framework Core, and SQL Server. It models customers, configurable banking
 products, customer and office accounts, double-entry transactions, and daily
 interest calculation, tax, and posting.
 
-The application currently exposes a health endpoint. Customer, product, account,
-transaction, and interest operations are implemented in the service layer and
-covered by automated tests, but they are not yet exposed through HTTP endpoints.
+The application exposes a health endpoint and customer CRUD endpoints. Product,
+account, transaction, and interest operations are implemented in the service
+layer and covered by automated tests, but they are not yet exposed through HTTP
+endpoints.
 
 ## Main features
 
@@ -212,6 +213,8 @@ The response is:
 }
 ```
 
+Customer operations are available under `/api/customers`.
+
 ## Database migrations
 
 The initial migration and current model snapshot are stored in
@@ -244,9 +247,20 @@ The tests cover product and account construction, account-number generation,
 the EF Core model, transactions and ledger entries, interest calculation,
 posting, tax, and the interest engine.
 
-## Current API status
+## Customer API
 
-Only `GET /health` is currently mapped. To make this a complete HTTP banking
-API, the next layer should expose authenticated endpoints or background jobs
-that call the existing services. The interest engine is particularly suited to
-a scheduled daily background job.
+The customer controller exposes:
+
+- `GET /api/customers`
+- `GET /api/customers/{customerId}`
+- `POST /api/customers`
+- `PUT /api/customers/{customerId}`
+- `DELETE /api/customers/{customerId}`
+
+`POST` and `PUT` accept an optional `Idempotency-Key` GUID header. When it is
+omitted, the API generates one and returns it in the response header. `PUT` also
+accepts an optional `X-Performed-By` header for the customer audit record.
+
+Product, account, transaction, and interest endpoints still need to be exposed
+to make this a complete HTTP banking API. The interest engine is particularly
+suited to a scheduled daily background job.

@@ -17,18 +17,27 @@ public class CustomerActionRepository : ICustomerActionRepository
         _context.CustomerActions.Add(customerAction);
     }
 
-    public async Task<IReadOnlyList<CustomerAction>> GetByCustomerIdAsync(Guid customerId)
+    public void RemoveRange(IEnumerable<CustomerAction> customerActions)
+    {
+        _context.CustomerActions.RemoveRange(customerActions);
+    }
+
+    public async Task<IReadOnlyList<CustomerAction>> GetByCustomerIdAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default)
     {
         return await _context.CustomerActions
             .Where(c => c.CustomerId == customerId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
     }
 
-    public async Task<CustomerAction?> GetByIdempotencyKeyAsync(Guid guid)
+    public async Task<CustomerAction?> GetByIdempotencyKeyAsync(
+        Guid idempotencyKey,
+        CancellationToken cancellationToken = default)
     {
         return await _context.CustomerActions
             .SingleOrDefaultAsync(
-                c => c.IdempotencyKey == guid
-                );
+                c => c.IdempotencyKey == idempotencyKey,
+                cancellationToken);
     }
 }
